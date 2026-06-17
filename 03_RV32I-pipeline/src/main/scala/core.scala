@@ -83,7 +83,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     IDstage.io.inst         := IFBarrier.io.outInstr
     IDstage.io.w_en         := WBstage.io.regFileReq.w_en
     IDstage.io.rd_in        := WBstage.io.regFileReq.addr
-    IDstage.io.write_data   := WBstage.io.regFileReq.
+    IDstage.io.write_data   := WBstage.io.regFileReq.data
 
     //ID BARRIER
     IDstage.io.uop          := IDBarrier.io.inUOP
