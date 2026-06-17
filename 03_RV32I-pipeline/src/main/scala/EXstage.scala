@@ -72,6 +72,7 @@ class EXstage extends Module {
     val aluResult   = Output(UInt(32.W))
     val exception   = Output(Bool())
     val rd          = Output(UInt(5.W))
+    val rdin        = Input(UInt(5.W))
   })
 
   val ALU        = Module(new ALU)
@@ -84,6 +85,7 @@ class EXstage extends Module {
 
   io.aluResult := ALU.io.aluResult
   io.exception := io.XcptInvalid
+  io.rd := io.rdin
 }
 
 
