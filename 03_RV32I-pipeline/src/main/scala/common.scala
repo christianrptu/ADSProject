@@ -39,7 +39,7 @@ object uopc extends ChiselEnum {
   val SRA = Value(7.U)
   val SLT = Value(8.U)
   val SLTU = Value(9.U)
-  val SRLL = Value(10.U)
+  val SLTI = Value(10.U)
 
   val ADDI = Value(11.U)
   val XORI = Value(12.U)

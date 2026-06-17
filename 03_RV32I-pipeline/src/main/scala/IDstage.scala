@@ -67,8 +67,8 @@ class ID extends Module{
     val rs2     = io.inst(24,20)
     val rd      = io.inst(11,7)
     val i_imm   = Cat(Fill(20, io.inst(31)), io.inst(31,20))
-    val s_imm   = Cat(io.inst(31,25), io.inst(11,7))
-    val u_imm   = io.inst(31,12)
+    //val s_imm   = Cat(io.inst(31,25), io.inst(11,7))
+    //val u_imm   = io.inst(31,12)
 
     val rf = Module(new regFile)
 
@@ -80,44 +80,36 @@ class ID extends Module{
 
     switch(opcode){
         is(OPC_R){
-            when(funct3 === "b000".U && funct7 === "b0000000".U) {
-                uop := uopc.ADD
-                XcptInvalid := false.B
-            }
-            .elsewhen(funct3 === "b000".U && funct7 === "b0100000".U) {
-                uop := uopc.SUB
-                XcptInvalid := false.B
-            }
-            .elsewhen(funct3 === "b100".U && funct7 === "b0000000".U) {
-                uop := uopc.XOR
-                XcptInvalid := false.B
-            }
-            .elsewhen(funct3 === "b110".U && funct7 === "b0000000".U) {
-                uop := uopc.OR
-                XcptInvalid := false.B
-            }
-            .elsewhen(funct3 === "b111".U && funct7 === "b0000000".U) {
-                uop := uopc.AND
-                XcptInvalid := false.B
+            when(funct7 === "b0000000".U){
+                switch(funct3){
+                    is("b000".U){ uop := uopc.ADD;  XcptInvalid := false.B }
+                    is("b001".U){ uop := uopc.SLL;  XcptInvalid := false.B }
+                    is("b010".U){ uop := uopc.SLT;  XcptInvalid := false.B }
+                    is("b011".U){ uop := uopc.SLTU; XcptInvalid := false.B }
+                    is("b100".U){ uop := uopc.XOR;  XcptInvalid := false.B }
+                    is("b101".U){ uop := uopc.SRL;  XcptInvalid := false.B }
+                    is("b110".U){ uop := uopc.OR;   XcptInvalid := false.B }
+                    is("b111".U){ uop := uopc.AND;  XcptInvalid := false.B }
+                }
+            }.elsewhen(funct7 === "b0100000".U){
+                  switch(funct3){
+                      is("b000".U){ uop := uopc.SUB; XcptInvalid := false.B }
+                      is("b101".U){ uop := uopc.SRA; XcptInvalid := false.B }
+                  }
             }
         }
         is(OPC_I){
-            switch(funct3) {
-                is("b000".U) {
-                    uop := uopc.ADDI
-                    XcptInvalid := false.B
-                }
-                is("b100".U) {
-                    uop := uopc.XORI
-                    XcptInvalid := false.B
-                }
-                is("b110".U) {
-                    uop := uopc.ORI
-                    XcptInvalid := false.B
-                }
-                is("b111".U) {
-                    uop := uopc.ANDI
-                    XcptInvalid := false.B
+            switch(funct3){
+                is("b000".U){ uop := uopc.ADDI;  XcptInvalid := false.B }
+                is("b010".U){ uop := uopc.SLTI;  XcptInvalid := false.B }
+                is("b011".U){ uop := uopc.SLTIU; XcptInvalid := false.B }
+                is("b100".U){ uop := uopc.XORI;  XcptInvalid := false.B }
+                is("b110".U){ uop := uopc.ORI;   XcptInvalid := false.B }
+                is("b111".U){ uop := uopc.ANDI;  XcptInvalid := false.B }
+                is("b001".U){ when(funct7 === "b0000000".U){ uop := uopc.SLLI; XcptInvalid := false.B } }
+                is("b101".U){
+                    when(funct7 === "b0000000".U){ uop := uopc.SRLI; XcptInvalid := false.B }
+                      .elsewhen(funct7 === "b0100000".U){ uop := uopc.SRAI; XcptInvalid := false.B }
                 }
             }
         }

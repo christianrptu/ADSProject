@@ -27,6 +27,7 @@ Functionality:
 Outputs:
     aluResult: computation result from ALU
     exception: pass exception flag
+
 */
 
 package core_tile
@@ -40,24 +41,49 @@ import uopc._
 // Execute Stage
 // -----------------------------------------
 
-class EXstage extends Module {
-
+class ALUcontrol extends Module {
   val io = IO(new Bundle {
-    val operandA = Input(UInt(32.W))
-    val operandB = Input(UInt(32.W))
-    val operation = Input(ALUOp())
-    val aluResult = Output(UInt(32.W))
-    val exception = Output(UInt(1.W))
+    val uop    = Input(uopc())
+    val mapped = Output(ALUOp())
   })
 
-  val ALU = Module(new ALU)
+    io.mapped := ALUOp.ADD // default works like ADD, which is the same as NOP
 
-    io.operandA := ALU.io.operandA
-    io.operandB := ALU.io.operandA
-    io.aluResult := ALU.io.aluResult
-
-
-
+  switch(io.uop) {
+    is(uopc.ADD,  uopc.ADDI)  { io.mapped := ALUOp.ADD  }
+    is(uopc.SUB)              { io.mapped := ALUOp.SUB  }
+    is(uopc.AND,  uopc.ANDI)  { io.mapped := ALUOp.AND  }
+    is(uopc.OR,   uopc.ORI)   { io.mapped := ALUOp.OR   }
+    is(uopc.XOR,  uopc.XORI)  { io.mapped := ALUOp.XOR  }
+    is(uopc.SLL,  uopc.SLLI)  { io.mapped := ALUOp.SLL  }
+    is(uopc.SRL,  uopc.SRLI)  { io.mapped := ALUOp.SRL  }
+    is(uopc.SRA,  uopc.SRAI)  { io.mapped := ALUOp.SRA  }
+    is(uopc.SLT,  uopc.SLTI)  { io.mapped := ALUOp.SLT  }
+    is(uopc.SLTU, uopc.SLTIU) { io.mapped := ALUOp.SLTU }
   }
+}
+
+class EXstage extends Module {
+  val io = IO(new Bundle {
+    val operandA    = Input(UInt(32.W))
+    val operandB    = Input(UInt(32.W))
+    val operation   = Input(uopc())
+    val XcptInvalid = Input(Bool())
+    val aluResult   = Output(UInt(32.W))
+    val exception   = Output(UInt(1.W))
+  })
+
+  val ALU        = Module(new ALU)
+  val ALUcontrol = Module(new ALUcontrol)
+
+  ALUcontrol.io.uop := io.operation
+  ALU.io.operandA   := io.operandA
+  ALU.io.operandB   := io.operandB
+  ALU.io.operation  := ALUcontrol.io.mapped
+
+  io.aluResult := ALU.io.aluResult
+  io.exception := io.XcptInvalid.asUInt
+}
+
 
 //ToDo: Add your implementation according to the specification above here
