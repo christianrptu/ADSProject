@@ -75,20 +75,22 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val MEMBarrier = Module(new MEMBarrier)
 
     val WBstage = Module(new WBstage)
-    //val WBbarrier = Module(new )
 
     //IF STAGE & BARRIER WERKS
     IFstage.io.inst := IFBarrier.io.inInstr
 
     //ID STAGE
-    IDstage.io.inst := IFBarrier.io.outInstr
+    IDstage.io.inst         := IFBarrier.io.outInstr
+    IDstage.io.w_en         := WBstage.io.regFileReq.w_en
+    IDstage.io.rd_in        := WBstage.io.regFileReq.addr
+    IDstage.io.write_data   := WBstage.io.regFileReq.
 
     //ID BARRIER
-    IDstage.io.uop := IDBarrier.io.inUOP
-    IDstage.io.rd_out := IDBarrier.io.inRD
-    IDstage.io.XcptInvalid := IDBarrier.io.inXcptInvalid
-    IDstage.io.operandA := IDBarrier.io.inOperandA
-    IDstage.io.operandB := IDBarrier.io.inOperandB
+    IDstage.io.uop          := IDBarrier.io.inUOP
+    IDstage.io.rd_out       := IDBarrier.io.inRD
+    IDstage.io.XcptInvalid  := IDBarrier.io.inXcptInvalid
+    IDstage.io.operandA     := IDBarrier.io.inOperandA
+    IDstage.io.operandB     := IDBarrier.io.inOperandB
 
     //EX STAGE
     EXstage.io.uop      := IDBarrier.io.outUOP
