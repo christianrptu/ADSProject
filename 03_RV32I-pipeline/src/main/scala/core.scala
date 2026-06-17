@@ -58,7 +58,8 @@ import uopc._
 
 class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val io = IO(new Bundle {
-        //ToDo: Add I/O ports
+        val check_res = Output(UInt(32.W))
+        val exception = Output(Bool())
   })
 //ToDo: Add your implementation according to the specification above here 
 
@@ -74,7 +75,8 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     // val MEMstage = Module(new MEM)
     val MEMBarrier = Module(new MEMBarrier)
 
-    val WBstage = Module(new WBstage)
+    val WBstage   = Module(new WBstage)
+    val WBBarrier = Module(new WBBarrier) 
 
     //IF STAGE & BARRIER WERKS
     IFstage.io.inst := IFBarrier.io.inInstr
@@ -110,4 +112,10 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     //WB STAGE
     WBstage.io.aluResult := MEMBarrier.io.outALUResult
     WBstage.io.rd        := MEMBarrier.io.outRD
+    
+    WBBarrier.io.inCheckRes     := WBstage.io.aluResult
+    WBBarrier.io.inXcptInvalid  := MEMBarrier.io.outException
+
+    io.check_res := WBBarrier.io.outCheckRes
+    io.exception := WBBarrier.io.outXcptInvalid
 }
