@@ -79,7 +79,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val WBBarrier = Module(new WBBarrier) 
 
     //IF STAGE & BARRIER WERKS
-    IFstage.io.inst := IFBarrier.io.inInstr
+    IFBarrier.io.inInstr    := IFstage.io.inst
 
     //ID STAGE
     IDstage.io.inst         := IFBarrier.io.outInstr
