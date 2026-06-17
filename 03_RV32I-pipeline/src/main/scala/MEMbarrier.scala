@@ -34,7 +34,7 @@ import chisel3._
 // MEM-Barrier
 // -----------------------------------------
 
-class MEMbarrier extends Module{
+class MEMBarrier extends Module{
 
     val io = IO(new Bundle {
         val inALUResult     = Input(UInt(32.W))
