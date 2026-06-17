@@ -40,4 +40,30 @@ import chisel3._
 // Writeback Stage
 // -----------------------------------------
 
-//ToDo: Add your implementation according to the specification above here 
+//ToDo: Add your implementation according to the specification above here
+
+class WB extends Module {
+
+  val check_res = Output(UInt(32.W))
+
+  val io = IO(new Bundle {
+
+    val aluResult = Input(UInt(32.W))
+    val rd = Input(UInt(5.W))
+
+    val regFileReq = new Bundle {
+      val addr = Output(UInt(5.W))
+      val data = Output(UInt(32.W))
+      val wr_en = Output(Bool())
+    }
+    val check_res = Output(UInt(32.W))
+
+  })
+
+  io.regFileReq.addr := io.rd
+  io.regFileReq.data := io.aluResult
+  io.regFileReq.wr_en := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
+
+  io.check_res := io.aluResult
+
+}
