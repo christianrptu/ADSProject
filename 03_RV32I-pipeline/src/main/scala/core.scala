@@ -95,10 +95,11 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     IDBarrier.io.inOperandB     := IDstage.io.operandB
 
     //EX STAGE
-    EXstage.io.uop      := IDBarrier.io.outUOP
-    EXstage.io.rd_in    := IDBarrier.io.outRD
-    EXstage.io.operandA := IDBarrier.io.outOperandA
-    EXstage.io.operandB := IDBarrier.io.outOperandB
+    EXstage.io.uop          := IDBarrier.io.outUOP
+    EXstage.io.rd_in        := IDBarrier.io.outRD
+    EXstage.io.operandA     := IDBarrier.io.outOperandA
+    EXstage.io.operandB     := IDBarrier.io.outOperandB
+    EXstage.io.XcptInvalid  := IDBarrier.io.outXcptInvalid
 
     EXBarrier.io.inAluResult    := EXstage.io.aluResult
     EXBarrier.io.inRD           := EXstage.io.rd
