@@ -100,10 +100,10 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
 
     EXBarrier.io.inAluResult    := EXstage.io.aluResult
     EXBarrier.io.inRD           := EXstage.io.rd
-    EXBarrier.io.inXcptInvalid  := EXstage.exception
+    EXBarrier.io.inXcptInvalid  := EXstage.io.exception
 
     //MEM STAGE (As it is empty, we connect MEM reg to EXE reg)
-    MEMBarrier.io.inALUResult := EXBarrier.io.outALUResult
+    MEMBarrier.io.inALUResult := EXBarrier.io.outAluResult
     MEMBarrier.io.inRD        := EXBarrier.io.outRD
     MEMBarrier.io.inException := EXBarrier.io.outXcptInvalid
 

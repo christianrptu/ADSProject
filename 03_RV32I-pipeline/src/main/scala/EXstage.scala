@@ -67,22 +67,23 @@ class EXstage extends Module {
   val io = IO(new Bundle {
     val operandA    = Input(UInt(32.W))
     val operandB    = Input(UInt(32.W))
-    val operation   = Input(uopc())
+    val uop         = Input(uopc())
     val XcptInvalid = Input(Bool())
     val aluResult   = Output(UInt(32.W))
-    val exception   = Output(UInt(1.W))
+    val exception   = Output(Bool())
+    val rd          = Output(UInt(5.W))
   })
 
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
 
-  ALUcontrol.io.uop := io.operation
+  ALUcontrol.io.uop := io.uop
   ALU.io.operandA   := io.operandA
   ALU.io.operandB   := io.operandB
   ALU.io.operation  := ALUcontrol.io.mapped
 
   io.aluResult := ALU.io.aluResult
-  io.exception := io.XcptInvalid.asUInt
+  io.exception := io.XcptInvalid
 }
 
 
