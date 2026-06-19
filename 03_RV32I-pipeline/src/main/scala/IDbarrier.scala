@@ -46,31 +46,46 @@ class IDBarrier extends Module{
         val inOperandA     = Input(UInt(32.W))
         val inOperandB     = Input(UInt(32.W))
         val inXcptInvalid  = Input(Bool())
-        
+        val inWrten        = Input(Bool())
+        val inALUsrc       = Input(Bool())
+        val inImmExtnd     = Input(UInt(32.W))
+
         val outUOP         = Output(uopc())
         val outRD          = Output(UInt(5.W))
         val outOperandA    = Output(UInt(32.W))
         val outOperandB    = Output(UInt(32.W))
         val outXcptInvalid = Output(Bool())
+        val outWrten       = Output(Bool())
+        val outALUsrc      = Output(Bool())
+        val outImmExtnd    = Output(UInt(32.W))
     })
 
-//ToDo: Add your implementation according to the specification above here 
+//ToDo: Add your implementation according to the specification above here
 
     val uop      = RegInit(uopc.INVALID)
-    val XcptInvalid  = RegInit(0.U(1.W))
+    val XcptInvalid  = RegInit(false.B)
     val rd       = RegInit(0.U(5.W))
     val operandA = RegInit(0.U(32.W))
     val operandB = RegInit(0.U(32.W))
+    val wrten       = RegInit(false.B)
+    val ALUsrc      = RegInit(false.B)
+    val immExtnd    = RegInit(0.U(32.W))
 
     uop         := io.inUOP
     rd          := io.inRD
     operandA    := io.inOperandA
     operandB    := io.inOperandB
     XcptInvalid := io.inXcptInvalid
+    wrten       := io.inWrten
+    ALUsrc      := io.inALUsrc
+    immExtnd    := io.inImmExtnd
 
     io.outUOP          := uop
     io.outXcptInvalid  := XcptInvalid
     io.outRD           := rd
     io.outOperandA     := operandA
     io.outOperandB     := operandB
+    io.outWrten        := wrten
+    io.outALUsrc       := ALUsrc
+    io.outImmExtnd     := immExtnd
 }

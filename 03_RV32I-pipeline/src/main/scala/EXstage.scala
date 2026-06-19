@@ -66,26 +66,33 @@ class ALUcontrol extends Module {
 class EXstage extends Module {
   val io = IO(new Bundle {
     val operandA    = Input(UInt(32.W))
-    val operandB    = Input(UInt(32.W))
+    val operandB    = Input(UInt(32.W))   // rs2 register value
+    val immExtnd    = Input(UInt(32.W))   // sign/zero-extended immediate from ID
+    val ALUsrc      = Input(Bool())       // false = rs2, true = immediate
     val rd_in       = Input(UInt(5.W))
     val uop         = Input(uopc())
+    val wrten_in    = Input(Bool())       // passed through to WB
     val XcptInvalid = Input(Bool())
+
     val aluResult   = Output(UInt(32.W))
     val exception   = Output(Bool())
     val rd          = Output(UInt(5.W))
+    val wrten       = Output(Bool())
   })
 
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
 
   ALUcontrol.io.uop := io.uop
-  ALU.io.operandA   := io.operandA
-  ALU.io.operandB   := io.operandB
-  ALU.io.operation  := ALUcontrol.io.mapped
+
+  ALU.io.operandA  := io.operandA
+  ALU.io.operandB  := Mux(io.ALUsrc, io.immExtnd, io.operandB)// register2 vs. immediate
+  ALU.io.operation := ALUcontrol.io.mapped
 
   io.aluResult := ALU.io.aluResult
   io.exception := io.XcptInvalid
   io.rd        := io.rd_in
+  io.wrten     := io.wrten_in
 }
 
 

@@ -45,92 +45,137 @@ import uopc._
 // Decode Stage
 // -----------------------------------------
 
+class ControlUnit extends Module {
+    val io = IO(new Bundle {
+        val opcode = Input(UInt(7.W))
+        val funct3 = Input(UInt(3.W))
+        val funct7 = Input(UInt(7.W))
+
+        val uop         = Output(uopc())
+        val useImm      = Output(Bool())   // operandB: true = immediate, false = rs2
+        val immSel      = Output(Bool())   // sign-extend block: false = full imm, true = shamt
+        val XcptInvalid = Output(Bool())
+    })
+
+    val OPC_R = "b0110011".U
+    val OPC_I = "b0010011".U
+
+    io.uop         := uopc.INVALID
+    io.useImm      := false.B
+    io.immSel      := false.B
+    io.XcptInvalid := true.B
+
+    switch(io.opcode){
+        is(OPC_R){
+            when(io.funct7 === "b0000000".U){
+                switch(io.funct3){
+                    is("b000".U){ io.uop := uopc.ADD;  io.XcptInvalid := false.B }
+                    is("b001".U){ io.uop := uopc.SLL;  io.XcptInvalid := false.B }
+                    is("b010".U){ io.uop := uopc.SLT;  io.XcptInvalid := false.B }
+                    is("b011".U){ io.uop := uopc.SLTU; io.XcptInvalid := false.B }
+                    is("b100".U){ io.uop := uopc.XOR;  io.XcptInvalid := false.B }
+                    is("b101".U){ io.uop := uopc.SRL;  io.XcptInvalid := false.B }
+                    is("b110".U){ io.uop := uopc.OR;   io.XcptInvalid := false.B }
+                    is("b111".U){ io.uop := uopc.AND;  io.XcptInvalid := false.B }
+                }
+            }.elsewhen(io.funct7 === "b0100000".U){
+                switch(io.funct3){
+                    is("b000".U){ io.uop := uopc.SUB; io.XcptInvalid := false.B }
+                    is("b101".U){ io.uop := uopc.SRA; io.XcptInvalid := false.B }
+                }
+            }
+        }
+        is(OPC_I){
+            io.useImm := true.B                       //
+            switch(io.funct3){
+                is("b000".U){ io.uop := uopc.ADDI;  io.XcptInvalid := false.B }
+                is("b010".U){ io.uop := uopc.SLTI;  io.XcptInvalid := false.B }
+                is("b011".U){ io.uop := uopc.SLTIU; io.XcptInvalid := false.B }
+                is("b100".U){ io.uop := uopc.XORI;  io.XcptInvalid := false.B }
+                is("b110".U){ io.uop := uopc.ORI;   io.XcptInvalid := false.B }
+                is("b111".U){ io.uop := uopc.ANDI;  io.XcptInvalid := false.B }
+                is("b001".U){
+                    when(io.funct7 === "b0000000".U){
+                        io.uop := uopc.SLLI; io.immSel := true.B; io.XcptInvalid := false.B
+                    }
+                }
+                is("b101".U){
+                    when(io.funct7 === "b0000000".U){
+                        io.uop := uopc.SRLI; io.immSel := true.B; io.XcptInvalid := false.B
+                    }.elsewhen(io.funct7 === "b0100000".U){
+                        io.uop := uopc.SRAI; io.immSel := true.B; io.XcptInvalid := false.B
+                    }
+                }
+            }
+        }
+    }
+}
+
+class SignExtend extends Module {
+    val io = IO(new Bundle {
+        val imm_in  = Input(UInt(12.W))    // inst[31:20]
+        val sel     = Input(Bool())         // false = full sign-ext imm, true = shamt (zero-ext)
+        val imm_out = Output(UInt(32.W))
+    })
+    val full  = Cat(Fill(20, io.imm_in(11)), io.imm_in)   // 12-bit signed immediate
+    val shamt = Cat(0.U(27.W), io.imm_in(4,0))            // 5-bit shamt, zero-extended
+    io.imm_out := Mux(io.sel, shamt, full)
+}
+
 class ID extends Module{
     val io = IO(new Bundle{
         val inst        = Input(UInt(32.W))
         val w_en        = Input(Bool())
         val rd_in       = Input(UInt(5.W))
-        val write_data  = Input(UInt(32.W)) 
-        
+        val write_data  = Input(UInt(32.W))
+
         val uop         = Output(uopc())
+        val wrten       = Output(Bool()) //
+        val ALUsrc      = Output(Bool()) //
+        val immExtnd    = Output(UInt(32.W)) //
+        val XcptInvalid = Output(Bool())
+
         val rd_out      = Output(UInt(5.W))
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
-        val XcptInvalid = Output(Bool())
     })
 
-//ToDo: Add your implementation according to the specification above here 
-    val opcode  = io.inst(6,0)
-    val funct3  = io.inst(14,12)
-    val funct7  = io.inst(31,25)
-    val rs1     = io.inst(19,15)
-    val rs2     = io.inst(24,20)
-    val rd      = io.inst(11,7)
-    val i_imm   = Cat(Fill(20, io.inst(31)), io.inst(31,20))
-    //val s_imm   = Cat(io.inst(31,25), io.inst(11,7))
-    //val u_imm   = io.inst(31,12)
+    val opcode = io.inst(6,0)
+    val funct3 = io.inst(14,12)
+    val funct7 = io.inst(31,25)
+    val rs1    = io.inst(19,15)
+    val rs2    = io.inst(24,20)
+    val rd     = io.inst(11,7)
+    val imm12  = io.inst(31,20)        // raw 12-bit immediate field
 
-    val rf = Module(new regFile)
+    val rf   = Module(new regFile)
+    val cu   = Module(new ControlUnit)
+    val sigex = Module(new SignExtend)
 
-    val OPC_R = "b0110011".U
-    val OPC_I = "b0010011".U
+    // control unit: instruction -> uop + control signals
+    cu.io.opcode := opcode
+    cu.io.funct3 := funct3
+    cu.io.funct7 := funct7
 
-    val uop = WireDefault(uopc.INVALID)
-    val XcptInvalid = WireDefault(true.B)
+    // sign-extend, mode chosen by the control unit
+    sigex.io.imm_in := imm12
+    sigex.io.sel    := cu.io.immSel
 
-    switch(opcode){
-        is(OPC_R){
-            when(funct7 === "b0000000".U){
-                switch(funct3){
-                    is("b000".U){ uop := uopc.ADD;  XcptInvalid := false.B }
-                    is("b001".U){ uop := uopc.SLL;  XcptInvalid := false.B }
-                    is("b010".U){ uop := uopc.SLT;  XcptInvalid := false.B }
-                    is("b011".U){ uop := uopc.SLTU; XcptInvalid := false.B }
-                    is("b100".U){ uop := uopc.XOR;  XcptInvalid := false.B }
-                    is("b101".U){ uop := uopc.SRL;  XcptInvalid := false.B }
-                    is("b110".U){ uop := uopc.OR;   XcptInvalid := false.B }
-                    is("b111".U){ uop := uopc.AND;  XcptInvalid := false.B }
-                }
-            }.elsewhen(funct7 === "b0100000".U){
-                  switch(funct3){
-                      is("b000".U){ uop := uopc.SUB; XcptInvalid := false.B }
-                      is("b101".U){ uop := uopc.SRA; XcptInvalid := false.B }
-                  }
-            }
-        }
-        is(OPC_I){
-            switch(funct3){
-                is("b000".U){ uop := uopc.ADDI;  XcptInvalid := false.B }
-                is("b010".U){ uop := uopc.SLTI;  XcptInvalid := false.B }
-                is("b011".U){ uop := uopc.SLTIU; XcptInvalid := false.B }
-                is("b100".U){ uop := uopc.XORI;  XcptInvalid := false.B }
-                is("b110".U){ uop := uopc.ORI;   XcptInvalid := false.B }
-                is("b111".U){ uop := uopc.ANDI;  XcptInvalid := false.B }
-                is("b001".U){ when(funct7 === "b0000000".U){ uop := uopc.SLLI; XcptInvalid := false.B } }
-                is("b101".U){
-                    when(funct7 === "b0000000".U){ uop := uopc.SRLI; XcptInvalid := false.B }
-                      .elsewhen(funct7 === "b0100000".U){ uop := uopc.SRAI; XcptInvalid := false.B }
-                }
-            }
-        }
-    }
-
+    // register file
     rf.io.req_1.addr := rs1
     rf.io.req_2.addr := rs2
     rf.io.req_3.addr := io.rd_in
     rf.io.req_3.w_en := io.w_en
     rf.io.req_3.data := io.write_data
 
-    io.operandA := rf.io.resp_1.data
+    // datapath outputs
+    io.operandA    := rf.io.resp_1.data
+    io.operandB    := rf.io.resp_2.data
+    io.rd_out      := rd
+    io.uop         := cu.io.uop
+    io.XcptInvalid := cu.io.XcptInvalid
+    io.immExtnd    := sigex.io.imm_out
+    io.wrten       := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
+    io.ALUsrc       := cu.io.useImm
 
-    when(opcode === OPC_I) {
-        io.operandB := i_imm
-    }
-    .otherwise {
-        io.operandB := rf.io.resp_2.data
-    }
-
-    io.rd_out := rd
-    io.uop := uop
-    io.XcptInvalid := XcptInvalid
 }
