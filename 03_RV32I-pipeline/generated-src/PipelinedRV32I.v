@@ -622,7 +622,7 @@ module ControlUnit(
   input  [2:0] io_funct3,
   input  [6:0] io_funct7,
   output [4:0] io_uop,
-  output       io_useImm,
+  output       io_ALUsrc,
   output       io_immSel,
   output       io_XcptInvalid
 );
@@ -694,7 +694,7 @@ module ControlUnit(
   wire [4:0] _GEN_58 = 7'h13 == io_opcode ? _GEN_54 : 5'h14; // @[IDstage.scala 63:20 68:22]
   wire  _GEN_59 = 7'h13 == io_opcode ? _GEN_55 : 1'h1; // @[IDstage.scala 66:20 68:22]
   assign io_uop = 7'h33 == io_opcode ? _GEN_22 : _GEN_58; // @[IDstage.scala 68:22]
-  assign io_useImm = 7'h33 == io_opcode ? 1'h0 : 7'h13 == io_opcode; // @[IDstage.scala 64:20 68:22]
+  assign io_ALUsrc = 7'h33 == io_opcode ? 1'h0 : 7'h13 == io_opcode; // @[IDstage.scala 64:20 68:22]
   assign io_immSel = 7'h33 == io_opcode ? 1'h0 : 7'h13 == io_opcode & _GEN_56; // @[IDstage.scala 65:20 68:22]
   assign io_XcptInvalid = 7'h33 == io_opcode ? _GEN_23 : _GEN_59; // @[IDstage.scala 68:22]
 endmodule
@@ -736,7 +736,7 @@ module ID(
   wire [2:0] cu_io_funct3; // @[IDstage.scala 152:22]
   wire [6:0] cu_io_funct7; // @[IDstage.scala 152:22]
   wire [4:0] cu_io_uop; // @[IDstage.scala 152:22]
-  wire  cu_io_useImm; // @[IDstage.scala 152:22]
+  wire  cu_io_ALUsrc; // @[IDstage.scala 152:22]
   wire  cu_io_immSel; // @[IDstage.scala 152:22]
   wire  cu_io_XcptInvalid; // @[IDstage.scala 152:22]
   wire [11:0] sigex_io_imm_in; // @[IDstage.scala 153:23]
@@ -758,7 +758,7 @@ module ID(
     .io_funct3(cu_io_funct3),
     .io_funct7(cu_io_funct7),
     .io_uop(cu_io_uop),
-    .io_useImm(cu_io_useImm),
+    .io_ALUsrc(cu_io_ALUsrc),
     .io_immSel(cu_io_immSel),
     .io_XcptInvalid(cu_io_XcptInvalid)
   );
@@ -768,7 +768,7 @@ module ID(
     .io_imm_out(sigex_io_imm_out)
   );
   assign io_uop = cu_io_uop; // @[IDstage.scala 175:20]
-  assign io_ALUsrc = cu_io_useImm; // @[IDstage.scala 179:21]
+  assign io_ALUsrc = cu_io_ALUsrc; // @[IDstage.scala 179:21]
   assign io_immExtnd = sigex_io_imm_out; // @[IDstage.scala 177:20]
   assign io_XcptInvalid = cu_io_XcptInvalid; // @[IDstage.scala 176:20]
   assign io_rd_out = io_inst[11:7]; // @[IDstage.scala 148:25]

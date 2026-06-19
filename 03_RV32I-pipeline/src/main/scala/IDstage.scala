@@ -52,7 +52,7 @@ class ControlUnit extends Module {
         val funct7 = Input(UInt(7.W))
 
         val uop         = Output(uopc())
-        val useImm      = Output(Bool())   // operandB: true = immediate, false = rs2
+        val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
         val immSel      = Output(Bool())   // sign-extend block: false = full imm, true = shamt
         val XcptInvalid = Output(Bool())
     })
@@ -61,7 +61,7 @@ class ControlUnit extends Module {
     val OPC_I = "b0010011".U
 
     io.uop         := uopc.INVALID
-    io.useImm      := false.B
+    io.ALUsrc      := false.B
     io.immSel      := false.B
     io.XcptInvalid := true.B
 
@@ -86,7 +86,7 @@ class ControlUnit extends Module {
             }
         }
         is(OPC_I){
-            io.useImm := true.B                       //
+            io.ALUsrc := true.B                       //
             switch(io.funct3){
                 is("b000".U){ io.uop := uopc.ADDI;  io.XcptInvalid := false.B }
                 is("b010".U){ io.uop := uopc.SLTI;  io.XcptInvalid := false.B }
@@ -176,6 +176,6 @@ class ID extends Module{
     io.XcptInvalid := cu.io.XcptInvalid
     io.immExtnd    := sigex.io.imm_out
     io.wrten       := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
-    io.ALUsrc       := cu.io.useImm
+    io.ALUsrc       := cu.io.ALUsrc
 
 }

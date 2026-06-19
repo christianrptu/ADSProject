@@ -79,10 +79,10 @@ circuit PipelinedRV32I :
   module ControlUnit :
     input clock : Clock
     input reset : Reset
-    output io : { flip opcode : UInt<7>, flip funct3 : UInt<3>, flip funct7 : UInt<7>, uop : UInt<5>, useImm : UInt<1>, immSel : UInt<1>, XcptInvalid : UInt<1>}
+    output io : { flip opcode : UInt<7>, flip funct3 : UInt<3>, flip funct7 : UInt<7>, uop : UInt<5>, ALUsrc : UInt<1>, immSel : UInt<1>, XcptInvalid : UInt<1>}
 
     io.uop <= UInt<5>("h14") @[IDstage.scala 63:20]
-    io.useImm <= UInt<1>("h0") @[IDstage.scala 64:20]
+    io.ALUsrc <= UInt<1>("h0") @[IDstage.scala 64:20]
     io.immSel <= UInt<1>("h0") @[IDstage.scala 65:20]
     io.XcptInvalid <= UInt<1>("h1") @[IDstage.scala 66:20]
     node _T = eq(UInt<6>("h33"), io.opcode) @[IDstage.scala 68:22]
@@ -143,7 +143,7 @@ circuit PipelinedRV32I :
     else :
       node _T_13 = eq(UInt<5>("h13"), io.opcode) @[IDstage.scala 68:22]
       when _T_13 : @[IDstage.scala 68:22]
-        io.useImm <= UInt<1>("h1") @[IDstage.scala 89:23]
+        io.ALUsrc <= UInt<1>("h1") @[IDstage.scala 89:23]
         node _T_14 = eq(UInt<1>("h0"), io.funct3) @[IDstage.scala 90:30]
         when _T_14 : @[IDstage.scala 90:30]
           io.uop <= UInt<4>("hb") @[IDstage.scala 91:38]
@@ -248,7 +248,7 @@ circuit PipelinedRV32I :
     io.XcptInvalid <= cu.io.XcptInvalid @[IDstage.scala 176:20]
     io.immExtnd <= sigex.io.imm_out @[IDstage.scala 177:20]
     io.wrten <= UInt<1>("h1") @[IDstage.scala 178:20]
-    io.ALUsrc <= cu.io.useImm @[IDstage.scala 179:21]
+    io.ALUsrc <= cu.io.ALUsrc @[IDstage.scala 179:21]
 
   module IDBarrier :
     input clock : Clock
