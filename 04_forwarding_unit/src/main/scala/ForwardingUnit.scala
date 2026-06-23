@@ -38,6 +38,15 @@ import uopc._
 
 class ForwardingUnit extends Module {
   val io = IO(new Bundle {
+    val rs1_EX    = Input(UInt(32.W))
+    val rs2_EX    = Input(UInt(32.W))
+    val rd_MEM    = Input(UInt(32.W))
+    val rd_WB     = Input(UInt(32.W))
+    val wrEn_MEM  = Input(Bool())
+    val wrEn_WB   = Input(Bool())
+
+    val forwardA   = Output(UInt(2.W))
+    val forwardB   = Output(UInt(2.W))
     // Add I/O ports according to the specification above here
   })
 
