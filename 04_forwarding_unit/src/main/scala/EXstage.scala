@@ -73,6 +73,10 @@ class EXstage extends Module {
     val uop         = Input(uopc())
     val wrten_in    = Input(Bool())       // passed through to WB
     val XcptInvalid = Input(Bool())
+    val forwardSelA = Input(UInt(2.W)) // mux selector fordwarding unit
+    val forwardSelB = Input(UInt(2.W)) // mux selector fordwarding unit
+    val aluResultWB = Input(UInt(32.W)) // get reg from WB for fordwarding unit
+    val aluResultMEM= Input(UInt(32.W)) // get reg from MEM for fordwarding unit
 
     val aluResult   = Output(UInt(32.W))
     val exception   = Output(Bool())
@@ -85,8 +89,23 @@ class EXstage extends Module {
 
   ALUcontrol.io.uop := io.uop
 
-  ALU.io.operandA  := io.operandA
-  ALU.io.operandB  := Mux(io.ALUsrc, io.immExtnd, io.operandB)// register2 vs. immediate
+  val srcA = Wire(UInt(32.W))
+  val srcB = Wire(UInt(32.W))
+
+  srcA := io.operandA  // b00 default
+  switch(io.forwardSelA) {
+    is("b10".U) { srcA := io.aluResultMEM } // forward from MEM
+    is("b01".U) { srcA := io.aluResultWB }  // forward from WB
+  }
+
+  srcB := io.operandB // b00 default
+  switch(io.forwardSelB) {
+    is("b10".U) { srcB := io.aluResultMEM }
+    is("b01".U) { srcB := io.aluResultWB }
+  }
+
+  ALU.io.operandA  := srcA
+  ALU.io.operandB  := Mux(io.ALUsrc, io.immExtnd, srcB)  // forwarded rs2 vs. immediate
   ALU.io.operation := ALUcontrol.io.mapped
 
   io.aluResult := ALU.io.aluResult
@@ -94,6 +113,5 @@ class EXstage extends Module {
   io.rd        := io.rd_in
   io.wrten     := io.wrten_in
 }
-
 
 //ToDo: Add your implementation according to the specification above here

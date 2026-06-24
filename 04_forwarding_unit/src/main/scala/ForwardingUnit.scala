@@ -50,6 +50,23 @@ class ForwardingUnit extends Module {
     // Add I/O ports according to the specification above here
   })
 
+  // forwardA
+  when((io.rs1_EX === io.rd_MEM) && io.wrEn_MEM && (io.rs1_EX =/= 0.U)) {
+    io.forwardA := "b10".U // MEM
+  }.elsewhen((io.rs1_EX === io.rd_WB) && io.wrEn_WB && (io.rs1_EX =/= 0.U)) {
+    io.forwardA := "b01".U // WB
+  }.otherwise {
+    io.forwardA := "b00".U // No forward
+  }
+
+  // forwardB
+  when((io.rs2_EX === io.rd_MEM) && io.wrEn_MEM && (io.rs2_EX =/= 0.U)) {
+    io.forwardB := "b10".U // MEM
+  }.elsewhen((io.rs2_EX === io.rd_WB) && io.wrEn_WB && (io.rs2_EX =/= 0.U)) {
+    io.forwardB := "b01".U // WB
+  }.otherwise {
+    io.forwardB := "b00".U // No forward
+  }
   //ToDo: Add your implementation according to the specification above here 
 
 }

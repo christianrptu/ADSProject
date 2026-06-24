@@ -77,6 +77,8 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   val WBstage   = Module(new WBstage)
   val WBBarrier = Module(new WBBarrier)
 
+  val ForwardingUnit = Module(new ForwardingUnit)
+
   //IF STAGE & BARRIER
   IFBarrier.io.inInstr    := IFstage.io.inst
 
@@ -126,6 +128,24 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   //WB BARRIER
   WBBarrier.io.inCheckRes     := WBstage.io.aluResult
   WBBarrier.io.inXcptInvalid  := MEMBarrier.io.outException
+
+  //FORWARDING UNIT
+  ForwardingUnit.io.rs1_EX   := IDBarrier.io.rs1_EX
+  ForwardingUnit.io.rs2_EX   := IDBarrier.io.rs2_EX
+
+  ForwardingUnit.io.rd_MEM   := EXBarrier.io.outRD
+  ForwardingUnit.io.wrEn_MEM := EXBarrier.io.outWrten
+
+  ForwardingUnit.io.rd_WB    := MEMBarrier.io.outRD
+  ForwardingUnit.io.wrEn_WB  := MEMBarrier.io.outWrten
+
+  EXstage.io.forwardSelA := ForwardingUnit.io.forwardA
+  EXstage.io.forwardSelB := ForwardingUnit.io.forwardB
+  EXstage.io.aluResultMEM := EXBarrier.io.outAluResult   // value forwarded from MEM
+  EXstage.io.aluResultWB  := MEMBarrier.io.outALUResult  // value forwarded from WB
+
+  IDBarrier.io.rs1_ID := IDstage.io.inst(19,15)  // rs1
+  IDBarrier.io.rs2_ID := IDstage.io.inst(24,20)   // rs2
 
   io.check_res := WBBarrier.io.outCheckRes
   io.exception := WBBarrier.io.outXcptInvalid
