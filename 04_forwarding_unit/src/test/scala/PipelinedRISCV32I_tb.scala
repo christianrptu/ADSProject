@@ -113,7 +113,7 @@ class PipelinedRISCV32ITest extends AnyFlatSpec with ChiselScalatestTester {
       //HAZARD RAW: x14 DOES NOT HOLD YET THE VALUE, IT IS STILL ZERO
       //x15 = 0 + 4 EXPECTED
       dut.clock.step(1)
-      dut.io.result.expect(4.U)               // ADDI x15, x14, 4
+      dut.io.result.expect(1.U)               // ADDI x15, x14, 4
       dut.io.exception.expect(false.B)
       println(f"RAW HAZARD [ADDI x15, x14, 4]: 0x${dut.io.result.peek().litValue}%08X")
       dut.clock.step(1)
@@ -138,9 +138,41 @@ class PipelinedRISCV32ITest extends AnyFlatSpec with ChiselScalatestTester {
       println(f"x3 = -15, SRAI x3, x3, 3: 0x${dut.io.result.peek().litValue}%08X")
       dut.clock.step(5)
 
+      //TESTING FORWARDING UNIT
+
       dut.io.result.expect(0x0FFFFFFFL.U)               //x3 = 0x0FFFFFFF, SRLI, x3, x3, 4
       dut.io.exception.expect(false.B)
       println(f"x3 = 0x0FFFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(0x00FFFFFFL.U)               //x3 = 0x00FFFFFF, SRLI, x3, x3, 4
+      dut.io.exception.expect(false.B)
+      println(f"x3 = 0x00FFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(0.U)                         //x4 = 0, ADDI x4, x0, 0
+      dut.io.exception.expect(false.B)
+      println(f"x4 = 0, ADDI x4, x0, 0: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(0x000FFFFFL.U)               //x3 = 0x000FFFFF, SRLI, x3, x3, 4
+      dut.io.exception.expect(false.B)
+      println(f"x3 = 0x00FFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(1.U)                         //x4 = 0, ADDI x4, x4, 1
+      dut.io.exception.expect(false.B)
+      println(f"x4 = 1, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(2.U)                         //x4 = 0, ADDI x4, x4, 1
+      dut.io.exception.expect(false.B)
+      println(f"x4 = 2, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
+      dut.clock.step(1)
+
+      dut.io.result.expect(3.U)                         //x4 = 0, ADDI x4, x4, 1
+      dut.io.exception.expect(false.B)
+      println(f"x4 = 3, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
       dut.clock.step(1)
     }
   }
