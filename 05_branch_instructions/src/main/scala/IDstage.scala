@@ -40,6 +40,7 @@ package core_tile
 import chisel3._
 import chisel3.util._
 import uopc._
+import Bop._
 
 // -----------------------------------------
 // Decode Stage
@@ -52,6 +53,7 @@ class ControlUnit extends Module {
         val funct7 = Input(UInt(7.W))
 
         val uop         = Output(uopc())
+        val bop         = Output(Bop())    // Comparator opcodes
         val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
         val immSel      = Output(Bool())   // sign-extend block: false = full imm, true = shamt
         val XcptInvalid = Output(Bool())
@@ -64,6 +66,7 @@ class ControlUnit extends Module {
     val OPC_JARL = "b1100111".U 
 
     io.uop         := uopc.INVALID
+    io.bop         := Bop.BEQ
     io.ALUsrc      := false.B
     io.immSel      := false.B
     io.XcptInvalid := true.B
@@ -113,19 +116,19 @@ class ControlUnit extends Module {
         }
         is(OPC_B){
             switch(io.funct3){
-                is("b000".U){ io.uop := uopc.BEQ;  io.XcptInvalid := false.B }
-                is("b001".U){ io.uop := uopc.BNE;  io.XcptInvalid := false.B }
-                is("b100".U){ io.uop := uopc.BLT;  io.XcptInvalid := false.B }
-                is("b101".U){ io.uop := uopc.BGE;  io.XcptInvalid := false.B }
-                is("b110".U){ io.uop := uopc.BLTU; io.XcptInvalid := false.B }
-                is("b111".U){ io.uop := uopc.BGEU; io.XcptInvalid := false.B }
+                is("b000".U){ io.bop := bopc.BEQ;  io.XcptInvalid := false.B }
+                is("b001".U){ io.bop := bopc.BNE;  io.XcptInvalid := false.B }
+                is("b100".U){ io.bop := bopc.BLT;  io.XcptInvalid := false.B }
+                is("b101".U){ io.bop := bopc.BGE;  io.XcptInvalid := false.B }
+                is("b110".U){ io.bop := bopc.BLTU; io.XcptInvalid := false.B }
+                is("b111".U){ io.bop := bopc.BGEU; io.XcptInvalid := false.B }
             }
         }
         is(OPC_JAL){
-            io.uop := uopc.JAL; io.XcptInvalid := false.B
+            io.XcptInvalid := false.B
         }
         is(OPC_JARL){
-            io.uop := uopc.JALR; io.XcptInvalid := false.B
+            io.XcptInvalid := false.B
         }
     }
 }
