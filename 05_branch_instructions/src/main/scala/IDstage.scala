@@ -59,6 +59,9 @@ class ControlUnit extends Module {
 
     val OPC_R = "b0110011".U
     val OPC_I = "b0010011".U
+    val OPC_B = "b1100011".U
+    val OPC_JAL  = "b1101111".U
+    val OPC_JARL = "b1100111".U 
 
     io.uop         := uopc.INVALID
     io.ALUsrc      := false.B
