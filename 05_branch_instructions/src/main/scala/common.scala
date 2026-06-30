@@ -53,17 +53,7 @@ object uopc extends ChiselEnum {
 
     val NOP  = Value(19.U)
 
-    val JAL  = Value(20.U)
-    val JALR = Value(21.U)
-
-    val BEQ  = Value(22.U)
-    val BNE  = Value(23.U)
-    val BLT  = Value(24.U)
-    val BGE  = Value(25.U)
-    val BLTU = Value(26.U)
-    val BGEU = Value(27.U)
-
-    val INVALID = Value(28.U)
+    val INVALID = Value(20.U)
 }
 
 //ToDo: Add your implementation according to the specification above here 
