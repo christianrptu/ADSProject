@@ -111,6 +111,22 @@ class ControlUnit extends Module {
                 }
             }
         }
+        is(OPC_B){
+            switch(io.funct3){
+                is("b000".U){ io.uop := uopc.BEQ;  io.XcptInvalid := false.B }
+                is("b001".U){ io.uop := uopc.BNE;  io.XcptInvalid := false.B }
+                is("b100".U){ io.uop := uopc.BLT;  io.XcptInvalid := false.B }
+                is("b101".U){ io.uop := uopc.BGE;  io.XcptInvalid := false.B }
+                is("b110".U){ io.uop := uopc.BLTU; io.XcptInvalid := false.B }
+                is("b111".U){ io.uop := uopc.BGEU; io.XcptInvalid := false.B }
+            }
+        }
+        is(OPC_JAL){
+            io.uop := uopc.JAL; io.XcptInvalid := false.B
+        }
+        is(OPC_JARL){
+            io.uop := uopc.JALR; io.XcptInvalid := false.B
+        }
     }
 }
 
