@@ -41,7 +41,7 @@ class IFBarrier extends Module {
   val instrReg = RegInit(0.asUInt(32.W))
   val pcReg    = RegInit(0.asUInt(32.W))
 
-  when (io.flush === flase.B){
+  when (io.flush === false.B){
     instrReg    := io.inInstr
     io.outInstr := instrReg
     pcReg       := io.inPC

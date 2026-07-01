@@ -57,7 +57,7 @@ class ControlUnit extends Module {
         val npcSrc      = Output(UInt(3.W))
         val bop         = Output(Bop())    // Comparator opcodes
         val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
-        val immSel      = Output(Bool())   // sign-extend block: false = full imm, true = shamt
+        val immSel      = Output(UInt(2.W))   // sign-extend block: 00: full, 01: shamt, 10: jump, 11: branch
         val flush       = Output(Bool())
         val XcptInvalid = Output(Bool())
     })
@@ -71,7 +71,7 @@ class ControlUnit extends Module {
     io.uop         := uopc.INVALID
     io.bop         := Bop.BEQ
     io.ALUsrc      := false.B
-    io.immSel      := false.B
+    io.immSel      := 0.U
     io.flush       := false.B
     io.XcptInvalid := true.B
 
@@ -106,19 +106,20 @@ class ControlUnit extends Module {
                 is("b111".U){ io.uop := uopc.ANDI;  io.XcptInvalid := false.B }
                 is("b001".U){
                     when(io.funct7 === "b0000000".U){
-                        io.uop := uopc.SLLI; io.immSel := true.B; io.XcptInvalid := false.B
+                        io.uop := uopc.SLLI; io.immSel := 1.U; io.XcptInvalid := false.B
                     }
                 }
                 is("b101".U){
                     when(io.funct7 === "b0000000".U){
-                        io.uop := uopc.SRLI; io.immSel := true.B; io.XcptInvalid := false.B
+                        io.uop := uopc.SRLI; io.immSel := 1.U; io.XcptInvalid := false.B
                     }.elsewhen(io.funct7 === "b0100000".U){
-                        io.uop := uopc.SRAI; io.immSel := true.B; io.XcptInvalid := false.B
+                        io.uop := uopc.SRAI; io.immSel := 1.U; io.XcptInvalid := false.B
                     }
                 }
             }
         }
         is(OPC_B){
+            io.immSel := 3.U //B-Type imm calculation
             switch(io.funct3){
                 is("b000".U){ io.bop := Bop.BEQ;  io.XcptInvalid := false.B }
                 is("b001".U){ io.bop := Bop.BNE;  io.XcptInvalid := false.B }
@@ -131,13 +132,14 @@ class ControlUnit extends Module {
                 io.npcSrc := "b10".U //if it's a branch inst AND the branchComparison is true
                 io.flush  := true.B
             }
-
         }
         is(OPC_JAL){
+            io.immSel := 2.U //J-Type imm calculation
             io.XcptInvalid := false.B
             io.npcSrc := "b01".U
         }
         is(OPC_JARL){
+            //immSel stays default (0.U) because JARL is I-Type encoded
             io.XcptInvalid := false.B
             io.npcSrc := "b01".U
         }
@@ -172,8 +174,8 @@ class SignExtend extends Module {
                      io.imm_in(12,5),
                      io.imm_in(13),
                      io.imm_in(23,14))
-    val jump_imm   = Cat(Fill(11, jump_cat(19)), jump_cat, 0.U)
-    val branch_imm = Cat(Fill(19, io.imm_in(24)),
+    val jump_imm   = Cat(Fill(11, jump_cat(19)), jump_cat, 0.U) //20-bit jump
+    val branch_imm = Cat(Fill(19, io.imm_in(24)),               //
                      io.imm_in(24),
                      io.imm_in(0),
                      io.imm_in(23,18),
