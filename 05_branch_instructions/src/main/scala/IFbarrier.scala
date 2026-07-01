@@ -43,8 +43,11 @@ class IFBarrier extends Module {
 
   when (io.flush === false.B){
     instrReg    := io.inInstr
-    io.outInstr := instrReg
     pcReg       := io.inPC
-    io.outPC    := pcReg
+  }.otherwise{
+    instrReg    := 0.U
+    pcReg       := 0.U
   }
+    io.outInstr := instrReg
+    io.outPC    := pcReg
 }
