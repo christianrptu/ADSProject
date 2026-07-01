@@ -229,7 +229,7 @@ class ID extends Module{
         val w_en        = Input(Bool())
         val rd_in       = Input(UInt(5.W))
         val write_data  = Input(UInt(32.W))
-        val pc4         = Input(UInt(32.W))
+        val pc4_in         = Input(UInt(32.W))
 
         val nPC         = Output(UInt(32.W))
         val npcSrc      = Output(Bool())
@@ -244,6 +244,7 @@ class ID extends Module{
         val rd_out      = Output(UInt(5.W))
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
+        val pc4_out     = Output(UInt(32.W))
     })
 
     val opcode = io.inst(6,0)
@@ -297,4 +298,5 @@ class ID extends Module{
 
     io.j           := cu.io.j
     io.flush       := cu.io.flush
+    io.pc4_out     := io.pc4_in
 }
