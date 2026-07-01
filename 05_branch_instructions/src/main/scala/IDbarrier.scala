@@ -51,7 +51,7 @@ class IDBarrier extends Module{
         val inImmExtnd     = Input(UInt(32.W))
         val rs1_ID         = Input(UInt(5.W)) // for fordwarding unit
         val rs2_ID         = Input(UInt(5.W)) // for fordwarding unit
-        val inJ            = Output(Bool())
+        val inJ            = Input(Bool())
 
         val rs1_EX         = Output(UInt(5.W)) // for fordwarding unit
         val rs2_EX         = Output(UInt(5.W)) // for fordwarding unit
@@ -68,11 +68,11 @@ class IDBarrier extends Module{
 
 //ToDo: Add your implementation according to the specification above here
 
-    val uop      = RegInit(uopc.INVALID)
-    val XcptInvalid  = RegInit(false.B)
-    val rd       = RegInit(0.U(5.W))
-    val operandA = RegInit(0.U(32.W))
-    val operandB = RegInit(0.U(32.W))
+    val uop         = RegInit(uopc.INVALID)
+    val XcptInvalid = RegInit(false.B)
+    val rd          = RegInit(0.U(5.W))
+    val operandA    = RegInit(0.U(32.W))
+    val operandB    = RegInit(0.U(32.W))
     val wrten       = RegInit(false.B)
     val ALUsrc      = RegInit(false.B)
     val immExtnd    = RegInit(0.U(32.W))
@@ -90,7 +90,7 @@ class IDBarrier extends Module{
     immExtnd    := io.inImmExtnd
     rs1Addr     := io.rs1_ID // forwarding
     rs2Addr     := io.rs2_ID // forwarding
-    j           := inJ
+    j           := io.inJ
 
     io.outUOP          := uop
     io.outXcptInvalid  := XcptInvalid
