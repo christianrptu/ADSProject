@@ -43,20 +43,22 @@ import chisel3._
 //ToDo: Add your implementation according to the specification above here
 
 class WBstage extends Module {
-  val io = IO(new Bundle {
-    val aluResult  = Input(UInt(32.W))
-    val rd         = Input(UInt(5.W))
-    val wrten      = Input(Bool())
+    val io = IO(new Bundle {
+        val aluResult  = Input(UInt(32.W))
+        val rd         = Input(UInt(5.W))
+        val wrten      = Input(Bool())
+        val j          = Input(Bool())
 
-    val regFileReq = new Bundle {
-      val addr = Output(UInt(5.W))
-      val data = Output(UInt(32.W))
-      val w_en = Output(Bool())
-    }
-    val check_res = Output(UInt(32.W))
-  })
-  io.regFileReq.addr := io.rd
-  io.regFileReq.data := io.aluResult
-  io.regFileReq.w_en := io.wrten
-  io.check_res       := io.aluResult
+        val regFileReq = new Bundle {
+            val addr = Output(UInt(5.W))
+            val data = Output(UInt(32.W))
+            val w_en = Output(Bool())
+        }
+        val check_res = Output(UInt(32.W))
+    })
+
+    io.regFileReq.addr := io.rd
+    io.regFileReq.data := io.aluResult
+    io.regFileReq.w_en := io.wrten
+    io.check_res       := io.aluResult
 }
