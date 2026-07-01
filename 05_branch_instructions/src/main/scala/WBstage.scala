@@ -45,6 +45,7 @@ import chisel3._
 class WBstage extends Module {
     val io = IO(new Bundle {
         val aluResult  = Input(UInt(32.W))
+        val pc4        = Input(UInt(32.W))
         val rd         = Input(UInt(5.W))
         val wrten      = Input(Bool())
         val j          = Input(Bool())
@@ -57,8 +58,17 @@ class WBstage extends Module {
         val check_res = Output(UInt(32.W))
     })
 
+    val mux_out = RegInit(0.U(32.W))
+
+    when (io.j === true.B){
+        mux_out := pc4
+    }.
+    otherwise{
+        mux_out := aluResult
+    }
+
     io.regFileReq.addr := io.rd
     io.regFileReq.data := io.aluResult
     io.regFileReq.w_en := io.wrten
-    io.check_res       := io.aluResult
+    io.check_res       := mux_out
 }
