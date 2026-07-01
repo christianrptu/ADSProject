@@ -41,12 +41,14 @@ class MEMBarrier extends Module{
         val inException     = Input(UInt(1.W))
         val inWrten         = Input(Bool())
         val inJ             = Input(Bool())
+        val inPC4           = Input(UInt(32.W))
 
         val outALUResult    = Output(UInt(32.W))
         val outRD           = Output(UInt(5.W))
         val outException    = Output(UInt(1.W))
         val outWrten        = Output(Bool())
         val outJ            = Output(Bool())
+        val outPC4          = Output(UInt(32.W))
     })
 
     val aluResult = RegInit(0.U(32.W))
@@ -54,16 +56,19 @@ class MEMBarrier extends Module{
     val exception = RegInit(0.U(1.W))
     val wrten     = RegInit(false.B)
     val j         = RegInit(false.B)
+    val PC4       = RegInit(0.U(32.W))
 
     aluResult       := io.inALUResult
     rd              := io.inRD
     exception       := io.inException
     wrten           := io.inWrten
     j               := io.inJ
+    PC4             := io.inPC4
 
     io.outALUResult := aluResult
     io.outRD        := rd
     io.outException := exception
     io.outWrten     := wrten
     io.outJ         := j
+    io.outPC4       := PC4
 }
