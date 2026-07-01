@@ -48,6 +48,7 @@ class IFBarrier extends Module {
     instrReg    := 0.U
     pcReg       := 0.U
   }
+  
     io.outInstr := instrReg
     io.outPC    := pcReg
 }

@@ -59,6 +59,7 @@ class ControlUnit extends Module {
         val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
         val immSel      = Output(UInt(2.W))   // sign-extend block: 00: full, 01: shamt, 10: jump, 11: branch
         val flush       = Output(Bool())
+        val j           = Output(Bool())
         val XcptInvalid = Output(Bool())
     })
 
@@ -73,6 +74,7 @@ class ControlUnit extends Module {
     io.ALUsrc      := false.B
     io.immSel      := 0.U
     io.flush       := false.B
+    io.j           := false.B
     io.XcptInvalid := true.B
 
     switch(io.opcode){
@@ -137,11 +139,13 @@ class ControlUnit extends Module {
             io.immSel := 2.U //J-Type imm calculation
             io.XcptInvalid := false.B
             io.npcSrc := "b01".U
+            io.j      := true.B
         }
         is(OPC_JARL){
             //immSel stays default (0.U) because JARL is I-Type encoded
             io.XcptInvalid := false.B
             io.npcSrc := "b01".U
+            io.j      := true.B
         }
     }
     
@@ -237,6 +241,7 @@ class ID extends Module{
         val XcptInvalid = Output(Bool())
 
         val flush       = Output(Bool())
+        val j           = Output(Bool())
         val rd_out      = Output(UInt(5.W))
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
@@ -293,6 +298,6 @@ class ID extends Module{
     io.wrten       := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
     io.ALUsrc      := cu.io.ALUsrc
 
+    io.j           := cu.io.j
     io.flush       := cu.io.flush
-
 }
