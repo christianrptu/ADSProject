@@ -206,7 +206,6 @@ class ID extends Module{
     val rs2    = io.inst(24,20)
     val rd     = io.inst(11,7)
     val imm12  = io.inst(31,20)        // raw 12-bit immediate field
-    val immJp = Cat(io.inst(31),io.inst(19,12), io.inst(20),io.inst(30,21), 0.U(2.W))
 
     val rf    = Module(new regFile)
     val cu    = Module(new ControlUnit)
@@ -237,8 +236,8 @@ class ID extends Module{
 
     //Branch and jump
     io.npcSrc    := cu.io.npcSrc                              //mux selector for the next pc(pc+4, branch, jump)
-    io.jmAddress := Cat(io.pc4(31,12), immJp)                // jumpAddress
-    io.brAddress := io.pc4 + Cat(sigex.io.imm_out ,0.U(2.W)) // branchAddress
+    io.jmAddress := sigex.io.imm_out              // jumpAddress
+    io.brAddress := io.pc4 + sigex.io.imm_out // branchAddress
 
     // datapath outputs
     io.operandA    := rf.io.resp_1.data
