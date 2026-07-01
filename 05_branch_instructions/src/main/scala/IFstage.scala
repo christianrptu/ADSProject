@@ -34,6 +34,7 @@ package core_tile
 
 import chisel3._
 import chisel3.util.experimental.loadMemoryFromFile
+import chisel3.util._
 
 // -----------------------------------------
 // Fetch Stage
@@ -41,18 +42,35 @@ import chisel3.util.experimental.loadMemoryFromFile
 
 class IF (BinaryFile: String) extends Module {
   val io = IO(new Bundle {
-    val inst = Output(UInt(32.W)) 
+    val inst = Output(UInt(32.W))
+    val pc4  = Output(UInt(32.W))
+
+    val jmpAdd  = Input(UInt(32.W))
+    val brcAdd  = Input(UInt(32.W))
+    val nPcSel  = Input(UInt(32.W))
+
   })
 
 //ToDo: Add your implementation according to the specification above here
-    val IMem = Mem(4096, UInt(32.W))
-    loadMemoryFromFile(IMem, BinaryFile)
+  val IMem = Mem(4096, UInt(32.W))
+  loadMemoryFromFile(IMem, BinaryFile)
 
+  // Fetch
     val PC = RegInit(0.U(32.W))
-
     val addr = PC >> 2
 
-    io.inst := IMem(addr(11,0))
+  //next PC
+  val nPC = PC + 4.U
 
-    PC := PC + 4.U
+  //Next PC soruce Selection
+  PC := nPC // b00 default
+  switch(io.nPcSel) {
+    is("b10".U) { PC := io.brcAdd }
+    is("b01".U) { PC := io.jmpAdd }
+  }
+
+  // next stage
+  io.pc4 := nPC
+  io.inst := IMem(addr(11,0))
+
 }

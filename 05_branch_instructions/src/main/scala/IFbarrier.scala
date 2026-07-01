@@ -32,12 +32,17 @@ class IFBarrier extends Module {
   val io = IO(new Bundle {
     val inInstr  = Input(UInt(32.W))
     val outInstr = Output(UInt(32.W))
+    val inPC     = Input(UInt(32.W))
+    val outPC    = Output(UInt(32.W))
   })
 
 //ToDo: Add your implementation according to the specification above here
   val instrReg = RegInit(0.asUInt(32.W))
+  val pcReg    = RegInit(0.asUInt(32.W))
 
   instrReg    := io.inInstr
-
   io.outInstr := instrReg
+
+  pcReg    := io.inPC
+  io.outPC := pcReg
 }

@@ -1,6 +1,5 @@
 # Assignment 05: Branch and Jump Instructions
 
-
 ## Processor Architecture Overview
 
 ### 5-Stage Pipeline with Hazard Detection and Forwarding
@@ -20,7 +19,7 @@ Pay attention to enabling the core to handle control hazards correctly that aris
 For this task you can use a simple static branch prediction scheme that always assumes conditional branches as not taken. 
 Unconditional jumps should always be taken.
 Implement the necessary control logic to flush the necessary pipeline stages when a conditional branch evaluates to be taken.
- 
+
 ## Project Structure
 
 ### Source Code (`src/main/scala/`)
@@ -42,25 +41,27 @@ Implement the necessary control logic to flush the necessary pipeline stages whe
 ### Test Files (`src/test/`)
 
 - **`scala/`**: Chisel testbench with test programs and verification harness
+  
   - `PipelinedRISCV32I_tb.scala`: Chisel testbench for processor verification
   - Test programs in assembly format
 
 - **`programs/`**: Binary instruction files
+  
   - `BinaryFile`: Compiled test program loaded into instruction memory
 
 ## RV32I Instruction Set Coverage
 
 ### Instruction Categories
 
-| Category | Instructions | Count |
-|----------|--------------|-------|
-| **Arithmetic** | ADD, ADDI, SUB | 3 |
-| **Comparison** | SLT, SLTI, SLTU, SLTIU | 4 |
-| **Logical** | AND, ANDI, OR, ORI, XOR, XORI | 6 |
-| **Shift** | SLL, SLLI, SRL, SRLI, SRA, SRAI | 6 |
-| **Branch** | BEQ, BNE, BLT, BGE, BLTU, BGEU | 6 |
-| **Jump** | JAL, JALR | 2 |
-| **Total** | | **27** |
+| Category       | Instructions                    | Count  |
+| -------------- | ------------------------------- | ------ |
+| **Arithmetic** | ADD, ADDI, SUB                  | 3      |
+| **Comparison** | SLT, SLTI, SLTU, SLTIU          | 4      |
+| **Logical**    | AND, ANDI, OR, ORI, XOR, XORI   | 6      |
+| **Shift**      | SLL, SLLI, SRL, SRLI, SRA, SRAI | 6      |
+| **Branch**     | BEQ, BNE, BLT, BGE, BLTU, BGEU  | 6      |
+| **Jump**       | JAL, JALR                       | 2      |
+| **Total**      |                                 | **27** |
 
 ### Not Implemented
 
@@ -74,10 +75,12 @@ Implement the necessary control logic to flush the necessary pipeline stages whe
 ## Requirements
 
 - **Build Tools**:
+  
   - Scala CLI or SBT (Scala Build Tool)
   - Chisel 3.5+
 
 - **Optional Visualization**:
+  
   - GTKWave or similar for waveform viewing
   - Browser-based tools like [Surfer](https://app.surfer-project.org/)
 
@@ -103,12 +106,14 @@ sbt test
 ```
 
 This:
+
 - Loads test program from `src/test/programs/BinaryFile`
 - Runs simulation for specified number of cycles
 - Verifies expected register file values at each stage
 - Generates waveforms in `test_run_dir/`
 
 **Expected Output** (successful test):
+
 ```
 [info] PipelinedRISCV32ITest: PipelinedRV32I_Tester should work
 [info] Run completed successfully.
@@ -118,11 +123,10 @@ This:
 
 - **Chisel tests**: VCD files in `test_run_dir/<Test_Name>/PipelinedRV32I.vcd`
 - Open with GTKWave:
+  
   ```bash
   gtkwave test_run_dir/*/PipelinedRV32I.vcd
   ```
-
-
 
 ## Test Coverage
 

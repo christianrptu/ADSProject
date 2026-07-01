@@ -79,14 +79,21 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
 
   val ForwardingUnit = Module(new ForwardingUnit)
 
-  //IF STAGE & BARRIER
+  //IF STAGE
+  IFstage.io.jmpAdd       := IDstage.io.jmAddress
+  IFstage.io.brcAdd       := IDstage.io.brAddress
+  IFstage.io.nPcSel       := IDstage.io.npcSrc
+
+  //IF BARRIER
   IFBarrier.io.inInstr    := IFstage.io.inst
+  IFBarrier.io.inPC       := IFstage.io.pc4
 
   //ID STAGE
   IDstage.io.inst         := IFBarrier.io.outInstr
   IDstage.io.w_en         := WBstage.io.regFileReq.w_en
   IDstage.io.rd_in        := WBstage.io.regFileReq.addr
   IDstage.io.write_data   := WBstage.io.regFileReq.data
+  IDstage.io.pc4          := IFBarrier.io.inPC
 
   //ID BARRIER
   IDBarrier.io.inUOP          := IDstage.io.uop
