@@ -52,6 +52,7 @@ class IDBarrier extends Module{
         val rs1_ID         = Input(UInt(5.W)) // for fordwarding unit
         val rs2_ID         = Input(UInt(5.W)) // for fordwarding unit
         val inJ            = Input(Bool())
+        val inPC4          = Input(UInt(32.W))
 
         val rs1_EX         = Output(UInt(5.W)) // for fordwarding unit
         val rs2_EX         = Output(UInt(5.W)) // for fordwarding unit
@@ -64,6 +65,7 @@ class IDBarrier extends Module{
         val outALUsrc      = Output(Bool())
         val outImmExtnd    = Output(UInt(32.W))
         val outJ           = Output(Bool())
+        val outPC4         = Output(UInt(32.W))
     })
 
 //ToDo: Add your implementation according to the specification above here
@@ -79,6 +81,7 @@ class IDBarrier extends Module{
     val rs1Addr     = RegInit(0.U(5.W))   // rs1 address pipeline reg
     val rs2Addr     = RegInit(0.U(5.W))   // rs2 address pipeline reg
     val j           = RegInit(false.B)
+    val PC4         = RegInit(0.U(32.W))
 
     uop         := io.inUOP
     rd          := io.inRD
@@ -91,6 +94,7 @@ class IDBarrier extends Module{
     rs1Addr     := io.rs1_ID // forwarding
     rs2Addr     := io.rs2_ID // forwarding
     j           := io.inJ
+    PC4         := io.inPC4
 
     io.outUOP          := uop
     io.outXcptInvalid  := XcptInvalid
@@ -103,4 +107,5 @@ class IDBarrier extends Module{
     io.rs1_EX          := rs1Addr // forwarding
     io.rs2_EX          := rs2Addr // forwarding
     io.outJ            := j
+    io.outPC4          := PC4
 }
