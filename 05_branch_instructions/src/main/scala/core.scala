@@ -87,6 +87,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   //IF BARRIER
   IFBarrier.io.inInstr    := IFstage.io.inst
   IFBarrier.io.inPC       := IFstage.io.pc4
+  IFBarrier.io.flush      := IDstage.io.flush
 
   //ID STAGE
   IDstage.io.inst         := IFBarrier.io.outInstr
