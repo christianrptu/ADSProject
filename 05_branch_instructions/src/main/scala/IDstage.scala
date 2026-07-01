@@ -143,7 +143,6 @@ class ControlUnit extends Module {
     //Next PC source Sel default
     io.npcSrc := "b00".U // b00 default
 
-    
 }
 
 class SignExtend extends Module {
