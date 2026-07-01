@@ -148,7 +148,8 @@ class ControlUnit extends Module {
 
 }
 
-class SignExtend extends Module {
+//OLD SIGN EXTEND
+/*class SignExtend extends Module {
     val io = IO(new Bundle {
         val imm_in  = Input(UInt(12.W))    // inst[31:20]
         val sel     = Input(Bool())         // false = full sign-ext imm, true = shamt (zero-ext)
@@ -157,6 +158,42 @@ class SignExtend extends Module {
     val full  = Cat(Fill(20, io.imm_in(11)), io.imm_in)   // 12-bit signed immediate
     val shamt = Cat(0.U(27.W), io.imm_in(4,0))            // 5-bit shamt, zero-extended
     io.imm_out := Mux(io.sel, shamt, full)
+}*/
+
+class SignExtend extends Module {
+    val io = IO(new Bundle {
+        val imm_in  = Input(UInt(25.W)) //TAKING [31:7]
+        val sel     = Input(UInt(2.W))
+        val imm_out = Output(UInt(32.W))
+    })
+    val full       = Cat(Fill(20, io.imm_in(24)), io.imm_in(24,13))   // 12-bit signed immediate
+    val shamt      = Cat(0.U(27.W), io.imm_in(17,13))            // 5-bit shamt, zero-extended
+    val jump_cat   = Cat(io.imm_in(24),
+                     io.imm_in(12,5),
+                     io.imm_in(13),
+                     io.imm_in(23,14))
+    val jump_imm   = Cat(Fill(11, jump_cat(19)), jump_cat, 0.U)
+    val branch_imm = Cat(Fill(19, io.imm_in(24)),
+                     io.imm_in(24),
+                     io.imm_in(0),
+                     io.imm_in(23,18),
+                     io.imm_in(4,1),
+                     0.U)
+
+    switch(io.sel){
+        is(0.U){
+            io.imm_out := full
+        }
+        is(1.U){
+            io.imm_out := shamt
+        }
+        is(2.U){
+            io.imm_out := jump_imm
+        }
+        is(3.U){
+            io.imm_out := branch_imm
+        }
+    }
 }
 
 class Comparator extends Module {
