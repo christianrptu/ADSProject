@@ -229,7 +229,7 @@ class ID extends Module{
         val w_en        = Input(Bool())
         val rd_in       = Input(UInt(5.W))
         val write_data  = Input(UInt(32.W))
-        val pc4         = Input(UInt(32.W))
+        val pc4_in         = Input(UInt(32.W))
 
         val jmAddress   = Output(UInt(32.W))
         val brAddress   = Output(UInt(32.W))
@@ -245,6 +245,7 @@ class ID extends Module{
         val rd_out      = Output(UInt(5.W))
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
+        val pc4_out     = Output(UInt(32.W))
     })
 
     val opcode = io.inst(6,0)
@@ -285,8 +286,8 @@ class ID extends Module{
 
     //Branch and jump
     io.npcSrc    := cu.io.npcSrc                              //mux selector for the next pc(pc+4, branch, jump)
-    io.jmAddress := Cat(io.pc4(31,12), immJp)                // jumpAddress
-    io.brAddress := io.pc4 + Cat(sigex.io.imm_out ,0.U(2.W)) // branchAddress
+    io.jmAddress := Cat(io.pc4_in(31,12), immJp)                // jumpAddress
+    io.brAddress := io.pc4_in + Cat(sigex.io.imm_out ,0.U(2.W)) // branchAddress
 
     // datapath outputs
     io.operandA    := rf.io.resp_1.data
@@ -300,4 +301,5 @@ class ID extends Module{
 
     io.j           := cu.io.j
     io.flush       := cu.io.flush
+    io.pc4_out     := io.pc4_in
 }
