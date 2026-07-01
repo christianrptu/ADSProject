@@ -105,6 +105,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDBarrier.io.inWrten        := IDstage.io.wrten
   IDBarrier.io.inALUsrc       := IDstage.io.ALUsrc
   IDBarrier.io.inImmExtnd     := IDstage.io.immExtnd
+  IDBarrier.io.inJ            := IDstage.io.j
 
   //EX STAGE
   EXstage.io.uop          := IDBarrier.io.outUOP
@@ -115,23 +116,28 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   EXstage.io.wrten_in     := IDBarrier.io.outWrten
   EXstage.io.ALUsrc       := IDBarrier.io.outALUsrc
   EXstage.io.immExtnd     := IDBarrier.io.outImmExtnd
+  EXstage.io.j_in         := IDBarrier.io.outJ
 
   //EX BARRIER
   EXBarrier.io.inAluResult    := EXstage.io.aluResult
   EXBarrier.io.inRD           := EXstage.io.rd
   EXBarrier.io.inXcptInvalid  := EXstage.io.exception
   EXBarrier.io.inWrten        := EXstage.io.wrten
+  EXBarrier.io.inJ            := EXstage.io.j_out
 
   //MEM STAGE (empty: connect MEM barrier straight to EX barrier outputs)
   MEMBarrier.io.inALUResult := EXBarrier.io.outAluResult
   MEMBarrier.io.inRD        := EXBarrier.io.outRD
   MEMBarrier.io.inException := EXBarrier.io.outXcptInvalid
   MEMBarrier.io.inWrten     := EXBarrier.io.outWrten
+  MEMBarrier.io.inJ         := EXBarrier.io.outJ
 
   //WB STAGE
   WBstage.io.aluResult := MEMBarrier.io.outALUResult
+  WBstage.io.pc4       := 0.U // Needs to change
   WBstage.io.rd        := MEMBarrier.io.outRD
   WBstage.io.wrten     := MEMBarrier.io.outWrten
+  WBstage.io.j         := MEMBarrier.io.outJ
 
   //WB BARRIER
   WBBarrier.io.inCheckRes     := WBstage.io.aluResult

@@ -61,10 +61,10 @@ class WBstage extends Module {
     val mux_out = RegInit(0.U(32.W))
 
     when (io.j === true.B){
-        mux_out := pc4
+        mux_out := io.pc4
     }.
     otherwise{
-        mux_out := aluResult
+        mux_out := io.aluResult
     }
 
     io.regFileReq.addr := io.rd
