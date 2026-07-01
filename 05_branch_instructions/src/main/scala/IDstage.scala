@@ -58,6 +58,7 @@ class ControlUnit extends Module {
         val bop         = Output(Bop())    // Comparator opcodes
         val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
         val immSel      = Output(Bool())   // sign-extend block: false = full imm, true = shamt
+        val flush       = Output(Bool())
         val XcptInvalid = Output(Bool())
     })
 
@@ -71,6 +72,7 @@ class ControlUnit extends Module {
     io.bop         := Bop.BEQ
     io.ALUsrc      := false.B
     io.immSel      := false.B
+    io.flush       := false.B
     io.XcptInvalid := true.B
 
     switch(io.opcode){
@@ -127,6 +129,7 @@ class ControlUnit extends Module {
             }
             when(io.taken === "b1".U){
                 io.npcSrc := "b10".U //if it's a branch inst AND the branchComparison is true
+                io.flush  := true.B
             }
 
         }
@@ -193,6 +196,7 @@ class ID extends Module{
         val immExtnd    = Output(UInt(32.W)) //
         val XcptInvalid = Output(Bool())
 
+        val flush       = Output(Bool())
         val rd_out      = Output(UInt(5.W))
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
@@ -249,6 +253,6 @@ class ID extends Module{
     io.wrten       := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
     io.ALUsrc      := cu.io.ALUsrc
 
-
+    io.flush       := cu.io.flush
 
 }
