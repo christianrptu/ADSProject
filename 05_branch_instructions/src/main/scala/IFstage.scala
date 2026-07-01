@@ -45,9 +45,8 @@ class IF (BinaryFile: String) extends Module {
     val inst = Output(UInt(32.W))
     val pc4  = Output(UInt(32.W))
 
-    val jmpAdd  = Input(UInt(32.W))
-    val brcAdd  = Input(UInt(32.W))
-    val nPcSel  = Input(UInt(32.W))
+    val nPC  = Input(UInt(32.W))
+    val nPcSel  = Input(Bool())
 
   })
 
@@ -63,11 +62,7 @@ class IF (BinaryFile: String) extends Module {
   val nPC = PC + 4.U
 
   //Next PC soruce Selection
-  PC := nPC // b00 default
-  switch(io.nPcSel) {
-    is("b10".U) { PC := io.brcAdd }
-    is("b01".U) { PC := io.jmpAdd }
-  }
+  PC := Mux(io.nPcSel, nPC, io.nPC )
 
   // next stage
   io.pc4 := nPC
