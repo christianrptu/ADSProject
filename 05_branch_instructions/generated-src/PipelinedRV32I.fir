@@ -2,26 +2,20 @@ circuit PipelinedRV32I :
   module IF :
     input clock : Clock
     input reset : Reset
-    output io : { inst : UInt<32>, pc4 : UInt<32>, flip jmpAdd : UInt<32>, flip brcAdd : UInt<32>, flip nPcSel : UInt<32>}
+    output io : { inst : UInt<32>, pc4 : UInt<32>, flip nPC : UInt<32>, flip nPcSel : UInt<1>}
 
-    cmem IMem : UInt<32> [4096] @[IFstage.scala 55:17]
+    cmem IMem : UInt<32> [4096] @[IFstage.scala 54:17]
     reg PC : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[IFstage.scala 59:21]
-    node addr = shr(PC, 2) @[IFstage.scala 60:19]
-    node _nPC_T = add(PC, UInt<3>("h4")) @[IFstage.scala 63:16]
-    node nPC = tail(_nPC_T, 1) @[IFstage.scala 63:16]
-    PC <= nPC @[IFstage.scala 66:6]
-    node _T = eq(UInt<2>("h2"), io.nPcSel) @[IFstage.scala 67:21]
-    when _T : @[IFstage.scala 67:21]
-      PC <= io.brcAdd @[IFstage.scala 68:22]
-    else :
-      node _T_1 = eq(UInt<1>("h1"), io.nPcSel) @[IFstage.scala 67:21]
-      when _T_1 : @[IFstage.scala 67:21]
-        PC <= io.jmpAdd @[IFstage.scala 69:22]
-    io.pc4 <= nPC @[IFstage.scala 73:10]
-    node _io_inst_T = bits(addr, 11, 0) @[IFstage.scala 74:23]
-    infer mport io_inst_MPORT = IMem[_io_inst_T], clock @[IFstage.scala 74:18]
-    io.inst <= io_inst_MPORT @[IFstage.scala 74:11]
+      reset => (reset, UInt<32>("h0")) @[IFstage.scala 58:21]
+    node addr = shr(PC, 2) @[IFstage.scala 59:19]
+    node _nPC_T = add(PC, UInt<3>("h4")) @[IFstage.scala 62:16]
+    node nPC = tail(_nPC_T, 1) @[IFstage.scala 62:16]
+    node _PC_T = mux(io.nPcSel, nPC, io.nPC) @[IFstage.scala 65:12]
+    PC <= _PC_T @[IFstage.scala 65:6]
+    io.pc4 <= nPC @[IFstage.scala 68:10]
+    node _io_inst_T = bits(addr, 11, 0) @[IFstage.scala 69:23]
+    infer mport io_inst_MPORT = IMem[_io_inst_T], clock @[IFstage.scala 69:18]
+    io.inst <= io_inst_MPORT @[IFstage.scala 69:11]
 
   module IFBarrier :
     input clock : Clock
@@ -375,7 +369,7 @@ circuit PipelinedRV32I :
   module ID :
     input clock : Clock
     input reset : Reset
-    output io : { flip inst : UInt<32>, flip w_en : UInt<1>, flip rd_in : UInt<5>, flip write_data : UInt<32>, flip pc4 : UInt<32>, jmAddress : UInt<32>, brAddress : UInt<32>, npcSrc : UInt<3>, uop : UInt<5>, wrten : UInt<1>, ALUsrc : UInt<1>, immExtnd : UInt<32>, XcptInvalid : UInt<1>, flush : UInt<1>, j : UInt<1>, rd_out : UInt<5>, operandA : UInt<32>, operandB : UInt<32>}
+    output io : { flip inst : UInt<32>, flip w_en : UInt<1>, flip rd_in : UInt<5>, flip write_data : UInt<32>, flip pc4_in : UInt<32>, nPC : UInt<32>, npcSrc : UInt<1>, uop : UInt<5>, wrten : UInt<1>, ALUsrc : UInt<1>, immExtnd : UInt<32>, XcptInvalid : UInt<1>, flush : UInt<1>, j : UInt<1>, rd_out : UInt<5>, operandA : UInt<32>, operandB : UInt<32>, pc4_out : UInt<32>}
 
     node opcode = bits(io.inst, 6, 0) @[IDstage.scala 250:25]
     node funct3 = bits(io.inst, 14, 12) @[IDstage.scala 251:25]
@@ -384,108 +378,99 @@ circuit PipelinedRV32I :
     node rs2 = bits(io.inst, 24, 20) @[IDstage.scala 254:25]
     node rd = bits(io.inst, 11, 7) @[IDstage.scala 255:25]
     node imm25 = bits(io.inst, 31, 7) @[IDstage.scala 256:25]
-    node _immJp_T = bits(io.inst, 31, 31) @[IDstage.scala 257:28]
-    node _immJp_T_1 = bits(io.inst, 19, 12) @[IDstage.scala 257:40]
-    node _immJp_T_2 = bits(io.inst, 20, 20) @[IDstage.scala 257:56]
-    node _immJp_T_3 = bits(io.inst, 30, 21) @[IDstage.scala 257:68]
-    node immJp_lo = cat(_immJp_T_3, UInt<2>("h0")) @[Cat.scala 31:58]
-    node immJp_hi_hi = cat(_immJp_T, _immJp_T_1) @[Cat.scala 31:58]
-    node immJp_hi = cat(immJp_hi_hi, _immJp_T_2) @[Cat.scala 31:58]
-    node immJp = cat(immJp_hi, immJp_lo) @[Cat.scala 31:58]
-    inst rf of regFile @[IDstage.scala 259:23]
+    inst rf of regFile @[IDstage.scala 258:23]
     rf.clock <= clock
     rf.reset <= reset
-    inst cu of ControlUnit @[IDstage.scala 260:23]
+    inst cu of ControlUnit @[IDstage.scala 259:23]
     cu.clock <= clock
     cu.reset <= reset
-    inst sigex of SignExtend @[IDstage.scala 261:23]
+    inst sigex of SignExtend @[IDstage.scala 260:23]
     sigex.clock <= clock
     sigex.reset <= reset
-    inst compr of Comparator @[IDstage.scala 262:23]
+    inst compr of Comparator @[IDstage.scala 261:23]
     compr.clock <= clock
     compr.reset <= reset
-    cu.io.opcode <= opcode @[IDstage.scala 265:19]
-    cu.io.funct3 <= funct3 @[IDstage.scala 266:19]
-    cu.io.funct7 <= funct7 @[IDstage.scala 267:19]
-    cu.io.taken <= compr.io.taken @[IDstage.scala 268:19]
-    sigex.io.imm_in <= imm25 @[IDstage.scala 271:21]
-    sigex.io.sel <= cu.io.immSel @[IDstage.scala 272:21]
-    rf.io.req_1.addr <= rs1 @[IDstage.scala 275:22]
-    rf.io.req_2.addr <= rs2 @[IDstage.scala 276:22]
-    rf.io.req_3.addr <= io.rd_in @[IDstage.scala 277:22]
-    rf.io.req_3.w_en <= io.w_en @[IDstage.scala 278:22]
-    rf.io.req_3.data <= io.write_data @[IDstage.scala 279:22]
-    compr.io.a <= rf.io.resp_1.data @[IDstage.scala 282:18]
-    compr.io.b <= rf.io.resp_2.data @[IDstage.scala 283:18]
-    compr.io.sel <= cu.io.bop @[IDstage.scala 284:18]
-    io.npcSrc <= cu.io.npcSrc @[IDstage.scala 287:18]
-    node _io_jmAddress_T = bits(io.pc4, 31, 12) @[IDstage.scala 288:31]
-    node _io_jmAddress_T_1 = cat(_io_jmAddress_T, immJp) @[Cat.scala 31:58]
-    io.jmAddress <= _io_jmAddress_T_1 @[IDstage.scala 288:18]
-    node _io_brAddress_T = cat(sigex.io.imm_out, UInt<2>("h0")) @[Cat.scala 31:58]
-    node _io_brAddress_T_1 = add(io.pc4, _io_brAddress_T) @[IDstage.scala 289:28]
-    node _io_brAddress_T_2 = tail(_io_brAddress_T_1, 1) @[IDstage.scala 289:28]
-    io.brAddress <= _io_brAddress_T_2 @[IDstage.scala 289:18]
-    io.operandA <= rf.io.resp_1.data @[IDstage.scala 292:20]
-    io.operandB <= rf.io.resp_2.data @[IDstage.scala 293:20]
-    io.rd_out <= rd @[IDstage.scala 294:20]
-    io.uop <= cu.io.uop @[IDstage.scala 295:20]
-    io.XcptInvalid <= cu.io.XcptInvalid @[IDstage.scala 296:20]
-    io.immExtnd <= sigex.io.imm_out @[IDstage.scala 297:20]
-    io.wrten <= UInt<1>("h1") @[IDstage.scala 298:20]
-    io.ALUsrc <= cu.io.ALUsrc @[IDstage.scala 299:20]
-    io.j <= cu.io.j @[IDstage.scala 301:20]
-    io.flush <= cu.io.flush @[IDstage.scala 302:20]
+    cu.io.opcode <= opcode @[IDstage.scala 264:19]
+    cu.io.funct3 <= funct3 @[IDstage.scala 265:19]
+    cu.io.funct7 <= funct7 @[IDstage.scala 266:19]
+    cu.io.taken <= compr.io.taken @[IDstage.scala 267:19]
+    sigex.io.imm_in <= imm25 @[IDstage.scala 270:21]
+    sigex.io.sel <= cu.io.immSel @[IDstage.scala 271:21]
+    rf.io.req_1.addr <= rs1 @[IDstage.scala 274:22]
+    rf.io.req_2.addr <= rs2 @[IDstage.scala 275:22]
+    rf.io.req_3.addr <= io.rd_in @[IDstage.scala 276:22]
+    rf.io.req_3.w_en <= io.w_en @[IDstage.scala 277:22]
+    rf.io.req_3.data <= io.write_data @[IDstage.scala 278:22]
+    compr.io.a <= rf.io.resp_1.data @[IDstage.scala 281:18]
+    compr.io.b <= rf.io.resp_2.data @[IDstage.scala 282:18]
+    compr.io.sel <= cu.io.bop @[IDstage.scala 283:18]
+    io.npcSrc <= cu.io.npcSrc @[IDstage.scala 286:18]
+    io.nPC <= sigex.io.imm_out @[IDstage.scala 287:12]
+    io.operandA <= rf.io.resp_1.data @[IDstage.scala 290:20]
+    io.operandB <= rf.io.resp_2.data @[IDstage.scala 291:20]
+    io.rd_out <= rd @[IDstage.scala 292:20]
+    io.uop <= cu.io.uop @[IDstage.scala 293:20]
+    io.XcptInvalid <= cu.io.XcptInvalid @[IDstage.scala 294:20]
+    io.immExtnd <= sigex.io.imm_out @[IDstage.scala 295:20]
+    io.wrten <= UInt<1>("h1") @[IDstage.scala 296:20]
+    io.ALUsrc <= cu.io.ALUsrc @[IDstage.scala 297:20]
+    io.j <= cu.io.j @[IDstage.scala 299:20]
+    io.flush <= cu.io.flush @[IDstage.scala 300:20]
+    io.pc4_out <= io.pc4_in @[IDstage.scala 301:20]
 
   module IDBarrier :
     input clock : Clock
     input reset : Reset
-    output io : { flip inUOP : UInt<5>, flip inRD : UInt<5>, flip inOperandA : UInt<32>, flip inOperandB : UInt<32>, flip inXcptInvalid : UInt<1>, flip inWrten : UInt<1>, flip inALUsrc : UInt<1>, flip inImmExtnd : UInt<32>, flip rs1_ID : UInt<5>, flip rs2_ID : UInt<5>, flip inJ : UInt<1>, rs1_EX : UInt<5>, rs2_EX : UInt<5>, outUOP : UInt<5>, outRD : UInt<5>, outOperandA : UInt<32>, outOperandB : UInt<32>, outXcptInvalid : UInt<1>, outWrten : UInt<1>, outALUsrc : UInt<1>, outImmExtnd : UInt<32>, outJ : UInt<1>}
+    output io : { flip inUOP : UInt<5>, flip inRD : UInt<5>, flip inOperandA : UInt<32>, flip inOperandB : UInt<32>, flip inXcptInvalid : UInt<1>, flip inWrten : UInt<1>, flip inALUsrc : UInt<1>, flip inImmExtnd : UInt<32>, flip rs1_ID : UInt<5>, flip rs2_ID : UInt<5>, flip inJ : UInt<1>, flip inPC4 : UInt<32>, rs1_EX : UInt<5>, rs2_EX : UInt<5>, outUOP : UInt<5>, outRD : UInt<5>, outOperandA : UInt<32>, outOperandB : UInt<32>, outXcptInvalid : UInt<1>, outWrten : UInt<1>, outALUsrc : UInt<1>, outImmExtnd : UInt<32>, outJ : UInt<1>, outPC4 : UInt<32>}
 
     reg uop : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h14")) @[IDbarrier.scala 71:30]
+      reset => (reset, UInt<5>("h14")) @[IDbarrier.scala 73:30]
     reg XcptInvalid : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 72:30]
+      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 74:30]
     reg rd : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 73:30]
+      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 75:30]
     reg operandA : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 74:30]
+      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 76:30]
     reg operandB : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 75:30]
+      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 77:30]
     reg wrten : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 76:30]
+      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 78:30]
     reg ALUsrc : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 77:30]
+      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 79:30]
     reg immExtnd : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 78:30]
+      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 80:30]
     reg rs1Addr : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 79:30]
+      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 81:30]
     reg rs2Addr : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 80:30]
+      reset => (reset, UInt<5>("h0")) @[IDbarrier.scala 82:30]
     reg j : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 81:30]
-    uop <= io.inUOP @[IDbarrier.scala 83:17]
-    rd <= io.inRD @[IDbarrier.scala 84:17]
-    operandA <= io.inOperandA @[IDbarrier.scala 85:17]
-    operandB <= io.inOperandB @[IDbarrier.scala 86:17]
-    XcptInvalid <= io.inXcptInvalid @[IDbarrier.scala 87:17]
-    wrten <= io.inWrten @[IDbarrier.scala 88:17]
-    ALUsrc <= io.inALUsrc @[IDbarrier.scala 89:17]
-    immExtnd <= io.inImmExtnd @[IDbarrier.scala 90:17]
-    rs1Addr <= io.rs1_ID @[IDbarrier.scala 91:17]
-    rs2Addr <= io.rs2_ID @[IDbarrier.scala 92:17]
-    j <= io.inJ @[IDbarrier.scala 93:17]
-    io.outUOP <= uop @[IDbarrier.scala 95:24]
-    io.outXcptInvalid <= XcptInvalid @[IDbarrier.scala 96:24]
-    io.outRD <= rd @[IDbarrier.scala 97:24]
-    io.outOperandA <= operandA @[IDbarrier.scala 98:24]
-    io.outOperandB <= operandB @[IDbarrier.scala 99:24]
-    io.outWrten <= wrten @[IDbarrier.scala 100:24]
-    io.outALUsrc <= ALUsrc @[IDbarrier.scala 101:24]
-    io.outImmExtnd <= immExtnd @[IDbarrier.scala 102:24]
-    io.rs1_EX <= rs1Addr @[IDbarrier.scala 103:24]
-    io.rs2_EX <= rs2Addr @[IDbarrier.scala 104:24]
-    io.outJ <= j @[IDbarrier.scala 105:24]
+      reset => (reset, UInt<1>("h0")) @[IDbarrier.scala 83:30]
+    reg PC4 : UInt<32>, clock with :
+      reset => (reset, UInt<32>("h0")) @[IDbarrier.scala 84:30]
+    uop <= io.inUOP @[IDbarrier.scala 86:17]
+    rd <= io.inRD @[IDbarrier.scala 87:17]
+    operandA <= io.inOperandA @[IDbarrier.scala 88:17]
+    operandB <= io.inOperandB @[IDbarrier.scala 89:17]
+    XcptInvalid <= io.inXcptInvalid @[IDbarrier.scala 90:17]
+    wrten <= io.inWrten @[IDbarrier.scala 91:17]
+    ALUsrc <= io.inALUsrc @[IDbarrier.scala 92:17]
+    immExtnd <= io.inImmExtnd @[IDbarrier.scala 93:17]
+    rs1Addr <= io.rs1_ID @[IDbarrier.scala 94:17]
+    rs2Addr <= io.rs2_ID @[IDbarrier.scala 95:17]
+    j <= io.inJ @[IDbarrier.scala 96:17]
+    PC4 <= io.inPC4 @[IDbarrier.scala 97:17]
+    io.outUOP <= uop @[IDbarrier.scala 99:24]
+    io.outXcptInvalid <= XcptInvalid @[IDbarrier.scala 100:24]
+    io.outRD <= rd @[IDbarrier.scala 101:24]
+    io.outOperandA <= operandA @[IDbarrier.scala 102:24]
+    io.outOperandB <= operandB @[IDbarrier.scala 103:24]
+    io.outWrten <= wrten @[IDbarrier.scala 104:24]
+    io.outALUsrc <= ALUsrc @[IDbarrier.scala 105:24]
+    io.outImmExtnd <= immExtnd @[IDbarrier.scala 106:24]
+    io.rs1_EX <= rs1Addr @[IDbarrier.scala 107:24]
+    io.rs2_EX <= rs2Addr @[IDbarrier.scala 108:24]
+    io.outJ <= j @[IDbarrier.scala 109:24]
+    io.outPC4 <= PC4 @[IDbarrier.scala 110:24]
 
   module ALU :
     input clock : Clock
@@ -675,94 +660,103 @@ circuit PipelinedRV32I :
   module EXstage :
     input clock : Clock
     input reset : Reset
-    output io : { flip operandA : UInt<32>, flip operandB : UInt<32>, flip immExtnd : UInt<32>, flip ALUsrc : UInt<1>, flip rd_in : UInt<5>, flip uop : UInt<5>, flip wrten_in : UInt<1>, flip XcptInvalid : UInt<1>, flip forwardSelA : UInt<2>, flip forwardSelB : UInt<2>, flip aluResultWB : UInt<32>, flip aluResultMEM : UInt<32>, flip j_in : UInt<1>, aluResult : UInt<32>, exception : UInt<1>, rd : UInt<5>, wrten : UInt<1>, j_out : UInt<1>}
+    output io : { flip operandA : UInt<32>, flip operandB : UInt<32>, flip immExtnd : UInt<32>, flip ALUsrc : UInt<1>, flip rd_in : UInt<5>, flip uop : UInt<5>, flip wrten_in : UInt<1>, flip XcptInvalid : UInt<1>, flip forwardSelA : UInt<2>, flip forwardSelB : UInt<2>, flip aluResultWB : UInt<32>, flip aluResultMEM : UInt<32>, flip j_in : UInt<1>, flip pc4_in : UInt<32>, aluResult : UInt<32>, exception : UInt<1>, rd : UInt<5>, wrten : UInt<1>, j_out : UInt<1>, pc4_out : UInt<32>}
 
-    inst ALU of ALU @[EXstage.scala 89:26]
+    inst ALU of ALU @[EXstage.scala 91:26]
     ALU.clock <= clock
     ALU.reset <= reset
-    inst ALUcontrol of ALUcontrol @[EXstage.scala 90:26]
+    inst ALUcontrol of ALUcontrol @[EXstage.scala 92:26]
     ALUcontrol.clock <= clock
     ALUcontrol.reset <= reset
-    ALUcontrol.io.uop <= io.uop @[EXstage.scala 92:21]
-    wire srcA : UInt<32> @[EXstage.scala 94:18]
-    wire srcB : UInt<32> @[EXstage.scala 95:18]
-    srcA <= io.operandA @[EXstage.scala 97:8]
-    node _T = eq(UInt<2>("h2"), io.forwardSelA) @[EXstage.scala 98:26]
-    when _T : @[EXstage.scala 98:26]
-      srcA <= io.aluResultMEM @[EXstage.scala 99:24]
+    ALUcontrol.io.uop <= io.uop @[EXstage.scala 94:21]
+    wire srcA : UInt<32> @[EXstage.scala 96:18]
+    wire srcB : UInt<32> @[EXstage.scala 97:18]
+    srcA <= io.operandA @[EXstage.scala 99:8]
+    node _T = eq(UInt<2>("h2"), io.forwardSelA) @[EXstage.scala 100:26]
+    when _T : @[EXstage.scala 100:26]
+      srcA <= io.aluResultMEM @[EXstage.scala 101:24]
     else :
-      node _T_1 = eq(UInt<1>("h1"), io.forwardSelA) @[EXstage.scala 98:26]
-      when _T_1 : @[EXstage.scala 98:26]
-        srcA <= io.aluResultWB @[EXstage.scala 100:24]
-    srcB <= io.operandB @[EXstage.scala 103:8]
-    node _T_2 = eq(UInt<2>("h2"), io.forwardSelB) @[EXstage.scala 104:26]
-    when _T_2 : @[EXstage.scala 104:26]
-      srcB <= io.aluResultMEM @[EXstage.scala 105:24]
+      node _T_1 = eq(UInt<1>("h1"), io.forwardSelA) @[EXstage.scala 100:26]
+      when _T_1 : @[EXstage.scala 100:26]
+        srcA <= io.aluResultWB @[EXstage.scala 102:24]
+    srcB <= io.operandB @[EXstage.scala 105:8]
+    node _T_2 = eq(UInt<2>("h2"), io.forwardSelB) @[EXstage.scala 106:26]
+    when _T_2 : @[EXstage.scala 106:26]
+      srcB <= io.aluResultMEM @[EXstage.scala 107:24]
     else :
-      node _T_3 = eq(UInt<1>("h1"), io.forwardSelB) @[EXstage.scala 104:26]
-      when _T_3 : @[EXstage.scala 104:26]
-        srcB <= io.aluResultWB @[EXstage.scala 106:24]
-    ALU.io.operandA <= srcA @[EXstage.scala 109:20]
-    node _ALU_io_operandB_T = mux(io.ALUsrc, io.immExtnd, srcB) @[EXstage.scala 110:26]
-    ALU.io.operandB <= _ALU_io_operandB_T @[EXstage.scala 110:20]
-    ALU.io.operation <= ALUcontrol.io.mapped @[EXstage.scala 111:20]
-    io.aluResult <= ALU.io.aluResult @[EXstage.scala 113:16]
-    io.exception <= io.XcptInvalid @[EXstage.scala 114:16]
-    io.rd <= io.rd_in @[EXstage.scala 115:16]
-    io.wrten <= io.wrten_in @[EXstage.scala 116:16]
-    io.j_out <= io.j_in @[EXstage.scala 117:16]
+      node _T_3 = eq(UInt<1>("h1"), io.forwardSelB) @[EXstage.scala 106:26]
+      when _T_3 : @[EXstage.scala 106:26]
+        srcB <= io.aluResultWB @[EXstage.scala 108:24]
+    ALU.io.operandA <= srcA @[EXstage.scala 111:20]
+    node _ALU_io_operandB_T = mux(io.ALUsrc, io.immExtnd, srcB) @[EXstage.scala 112:26]
+    ALU.io.operandB <= _ALU_io_operandB_T @[EXstage.scala 112:20]
+    ALU.io.operation <= ALUcontrol.io.mapped @[EXstage.scala 113:20]
+    io.aluResult <= ALU.io.aluResult @[EXstage.scala 115:16]
+    io.exception <= io.XcptInvalid @[EXstage.scala 116:16]
+    io.rd <= io.rd_in @[EXstage.scala 117:16]
+    io.wrten <= io.wrten_in @[EXstage.scala 118:16]
+    io.j_out <= io.j_in @[EXstage.scala 119:16]
+    io.pc4_out <= io.pc4_in @[EXstage.scala 120:16]
 
   module EXBarrier :
     input clock : Clock
     input reset : Reset
-    output io : { flip inAluResult : UInt<32>, flip inRD : UInt<5>, flip inXcptInvalid : UInt<1>, flip inWrten : UInt<1>, flip inJ : UInt<1>, outAluResult : UInt<32>, outRD : UInt<5>, outXcptInvalid : UInt<1>, outWrten : UInt<1>, outJ : UInt<1>}
+    output io : { flip inAluResult : UInt<32>, flip inRD : UInt<5>, flip inXcptInvalid : UInt<1>, flip inWrten : UInt<1>, flip inJ : UInt<1>, flip inPC4 : UInt<32>, outAluResult : UInt<32>, outRD : UInt<5>, outXcptInvalid : UInt<1>, outWrten : UInt<1>, outJ : UInt<1>, outPC4 : UInt<32>}
 
     reg aluResult : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[EXbarrier.scala 52:30]
+      reset => (reset, UInt<32>("h0")) @[EXbarrier.scala 54:30]
     reg RD : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h0")) @[EXbarrier.scala 53:30]
+      reset => (reset, UInt<5>("h0")) @[EXbarrier.scala 55:30]
     reg XcptInvalid : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[EXbarrier.scala 54:30]
-    reg wrten : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[EXbarrier.scala 55:30]
-    reg j : UInt<1>, clock with :
       reset => (reset, UInt<1>("h0")) @[EXbarrier.scala 56:30]
-    aluResult <= io.inAluResult @[EXbarrier.scala 58:17]
-    RD <= io.inRD @[EXbarrier.scala 59:17]
-    XcptInvalid <= io.inXcptInvalid @[EXbarrier.scala 60:17]
-    wrten <= io.inWrten @[EXbarrier.scala 61:17]
-    j <= io.inJ @[EXbarrier.scala 62:17]
-    io.outAluResult <= aluResult @[EXbarrier.scala 64:25]
-    io.outRD <= RD @[EXbarrier.scala 65:25]
-    io.outXcptInvalid <= XcptInvalid @[EXbarrier.scala 66:25]
-    io.outWrten <= wrten @[EXbarrier.scala 67:25]
-    io.outJ <= j @[EXbarrier.scala 68:25]
+    reg wrten : UInt<1>, clock with :
+      reset => (reset, UInt<1>("h0")) @[EXbarrier.scala 57:30]
+    reg j : UInt<1>, clock with :
+      reset => (reset, UInt<1>("h0")) @[EXbarrier.scala 58:30]
+    reg PC4 : UInt<32>, clock with :
+      reset => (reset, UInt<32>("h0")) @[EXbarrier.scala 59:30]
+    aluResult <= io.inAluResult @[EXbarrier.scala 61:17]
+    RD <= io.inRD @[EXbarrier.scala 62:17]
+    XcptInvalid <= io.inXcptInvalid @[EXbarrier.scala 63:17]
+    wrten <= io.inWrten @[EXbarrier.scala 64:17]
+    j <= io.inJ @[EXbarrier.scala 65:17]
+    PC4 <= io.inPC4 @[EXbarrier.scala 66:17]
+    io.outAluResult <= aluResult @[EXbarrier.scala 68:25]
+    io.outRD <= RD @[EXbarrier.scala 69:25]
+    io.outXcptInvalid <= XcptInvalid @[EXbarrier.scala 70:25]
+    io.outWrten <= wrten @[EXbarrier.scala 71:25]
+    io.outJ <= j @[EXbarrier.scala 72:25]
+    io.outPC4 <= PC4 @[EXbarrier.scala 73:25]
 
   module MEMBarrier :
     input clock : Clock
     input reset : Reset
-    output io : { flip inALUResult : UInt<32>, flip inRD : UInt<5>, flip inException : UInt<1>, flip inWrten : UInt<1>, flip inJ : UInt<1>, outALUResult : UInt<32>, outRD : UInt<5>, outException : UInt<1>, outWrten : UInt<1>, outJ : UInt<1>}
+    output io : { flip inALUResult : UInt<32>, flip inRD : UInt<5>, flip inException : UInt<1>, flip inWrten : UInt<1>, flip inJ : UInt<1>, flip inPC4 : UInt<32>, outALUResult : UInt<32>, outRD : UInt<5>, outException : UInt<1>, outWrten : UInt<1>, outJ : UInt<1>, outPC4 : UInt<32>}
 
     reg aluResult : UInt<32>, clock with :
-      reset => (reset, UInt<32>("h0")) @[MEMbarrier.scala 52:28]
+      reset => (reset, UInt<32>("h0")) @[MEMbarrier.scala 54:28]
     reg rd : UInt<5>, clock with :
-      reset => (reset, UInt<5>("h0")) @[MEMbarrier.scala 53:28]
+      reset => (reset, UInt<5>("h0")) @[MEMbarrier.scala 55:28]
     reg exception : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[MEMbarrier.scala 54:28]
-    reg wrten : UInt<1>, clock with :
-      reset => (reset, UInt<1>("h0")) @[MEMbarrier.scala 55:28]
-    reg j : UInt<1>, clock with :
       reset => (reset, UInt<1>("h0")) @[MEMbarrier.scala 56:28]
-    aluResult <= io.inALUResult @[MEMbarrier.scala 58:21]
-    rd <= io.inRD @[MEMbarrier.scala 59:21]
-    exception <= io.inException @[MEMbarrier.scala 60:21]
-    wrten <= io.inWrten @[MEMbarrier.scala 61:21]
-    j <= io.inJ @[MEMbarrier.scala 62:21]
-    io.outALUResult <= aluResult @[MEMbarrier.scala 64:21]
-    io.outRD <= rd @[MEMbarrier.scala 65:21]
-    io.outException <= exception @[MEMbarrier.scala 66:21]
-    io.outWrten <= wrten @[MEMbarrier.scala 67:21]
-    io.outJ <= j @[MEMbarrier.scala 68:21]
+    reg wrten : UInt<1>, clock with :
+      reset => (reset, UInt<1>("h0")) @[MEMbarrier.scala 57:28]
+    reg j : UInt<1>, clock with :
+      reset => (reset, UInt<1>("h0")) @[MEMbarrier.scala 58:28]
+    reg PC4 : UInt<32>, clock with :
+      reset => (reset, UInt<32>("h0")) @[MEMbarrier.scala 59:28]
+    aluResult <= io.inALUResult @[MEMbarrier.scala 61:21]
+    rd <= io.inRD @[MEMbarrier.scala 62:21]
+    exception <= io.inException @[MEMbarrier.scala 63:21]
+    wrten <= io.inWrten @[MEMbarrier.scala 64:21]
+    j <= io.inJ @[MEMbarrier.scala 65:21]
+    PC4 <= io.inPC4 @[MEMbarrier.scala 66:21]
+    io.outALUResult <= aluResult @[MEMbarrier.scala 68:21]
+    io.outRD <= rd @[MEMbarrier.scala 69:21]
+    io.outException <= exception @[MEMbarrier.scala 70:21]
+    io.outWrten <= wrten @[MEMbarrier.scala 71:21]
+    io.outJ <= j @[MEMbarrier.scala 72:21]
+    io.outPC4 <= PC4 @[MEMbarrier.scala 73:21]
 
   module WBstage :
     input clock : Clock
@@ -866,26 +860,26 @@ circuit PipelinedRV32I :
     inst ForwardingUnit of ForwardingUnit @[core.scala 80:30]
     ForwardingUnit.clock <= clock
     ForwardingUnit.reset <= reset
-    IFstage.io.jmpAdd <= IDstage.io.jmAddress @[core.scala 83:27]
-    IFstage.io.brcAdd <= IDstage.io.brAddress @[core.scala 84:27]
-    IFstage.io.nPcSel <= IDstage.io.npcSrc @[core.scala 85:27]
-    IFBarrier.io.inInstr <= IFstage.io.inst @[core.scala 88:27]
-    IFBarrier.io.inPC <= IFstage.io.pc4 @[core.scala 89:27]
-    IFBarrier.io.flush <= IDstage.io.flush @[core.scala 90:27]
-    IDstage.io.inst <= IFBarrier.io.outInstr @[core.scala 93:27]
-    IDstage.io.w_en <= WBstage.io.regFileReq.w_en @[core.scala 94:27]
-    IDstage.io.rd_in <= WBstage.io.regFileReq.addr @[core.scala 95:27]
-    IDstage.io.write_data <= WBstage.io.regFileReq.data @[core.scala 96:27]
-    IDstage.io.pc4 <= IFBarrier.io.inPC @[core.scala 97:27]
-    IDBarrier.io.inUOP <= IDstage.io.uop @[core.scala 100:31]
-    IDBarrier.io.inRD <= IDstage.io.rd_out @[core.scala 101:31]
-    IDBarrier.io.inXcptInvalid <= IDstage.io.XcptInvalid @[core.scala 102:31]
-    IDBarrier.io.inOperandA <= IDstage.io.operandA @[core.scala 103:31]
-    IDBarrier.io.inOperandB <= IDstage.io.operandB @[core.scala 104:31]
-    IDBarrier.io.inWrten <= IDstage.io.wrten @[core.scala 105:31]
-    IDBarrier.io.inALUsrc <= IDstage.io.ALUsrc @[core.scala 106:31]
-    IDBarrier.io.inImmExtnd <= IDstage.io.immExtnd @[core.scala 107:31]
-    IDBarrier.io.inJ <= IDstage.io.j @[core.scala 108:31]
+    IFstage.io.nPC <= IDstage.io.nPC @[core.scala 83:24]
+    IFstage.io.nPcSel <= IDstage.io.npcSrc @[core.scala 84:24]
+    IFBarrier.io.inInstr <= IFstage.io.inst @[core.scala 87:27]
+    IFBarrier.io.inPC <= IFstage.io.pc4 @[core.scala 88:27]
+    IFBarrier.io.flush <= IDstage.io.flush @[core.scala 89:27]
+    IDstage.io.inst <= IFBarrier.io.outInstr @[core.scala 92:27]
+    IDstage.io.w_en <= WBstage.io.regFileReq.w_en @[core.scala 93:27]
+    IDstage.io.rd_in <= WBstage.io.regFileReq.addr @[core.scala 94:27]
+    IDstage.io.write_data <= WBstage.io.regFileReq.data @[core.scala 95:27]
+    IDstage.io.pc4_in <= IFBarrier.io.inPC @[core.scala 96:27]
+    IDBarrier.io.inUOP <= IDstage.io.uop @[core.scala 99:33]
+    IDBarrier.io.inRD <= IDstage.io.rd_out @[core.scala 100:33]
+    IDBarrier.io.inXcptInvalid <= IDstage.io.XcptInvalid @[core.scala 101:33]
+    IDBarrier.io.inOperandA <= IDstage.io.operandA @[core.scala 102:33]
+    IDBarrier.io.inOperandB <= IDstage.io.operandB @[core.scala 103:33]
+    IDBarrier.io.inWrten <= IDstage.io.wrten @[core.scala 104:33]
+    IDBarrier.io.inALUsrc <= IDstage.io.ALUsrc @[core.scala 105:33]
+    IDBarrier.io.inImmExtnd <= IDstage.io.immExtnd @[core.scala 106:33]
+    IDBarrier.io.inJ <= IDstage.io.j @[core.scala 107:33]
+    IDBarrier.io.inPC4 <= IDstage.io.pc4_out @[core.scala 108:33]
     EXstage.io.uop <= IDBarrier.io.outUOP @[core.scala 111:27]
     EXstage.io.rd_in <= IDBarrier.io.outRD @[core.scala 112:27]
     EXstage.io.operandA <= IDBarrier.io.outOperandA @[core.scala 113:27]
@@ -895,39 +889,42 @@ circuit PipelinedRV32I :
     EXstage.io.ALUsrc <= IDBarrier.io.outALUsrc @[core.scala 117:27]
     EXstage.io.immExtnd <= IDBarrier.io.outImmExtnd @[core.scala 118:27]
     EXstage.io.j_in <= IDBarrier.io.outJ @[core.scala 119:27]
-    EXBarrier.io.inAluResult <= EXstage.io.aluResult @[core.scala 122:31]
-    EXBarrier.io.inRD <= EXstage.io.rd @[core.scala 123:31]
-    EXBarrier.io.inXcptInvalid <= EXstage.io.exception @[core.scala 124:31]
-    EXBarrier.io.inWrten <= EXstage.io.wrten @[core.scala 125:31]
-    EXBarrier.io.inJ <= EXstage.io.j_out @[core.scala 126:31]
-    MEMBarrier.io.inALUResult <= EXBarrier.io.outAluResult @[core.scala 129:29]
-    MEMBarrier.io.inRD <= EXBarrier.io.outRD @[core.scala 130:29]
-    MEMBarrier.io.inException <= EXBarrier.io.outXcptInvalid @[core.scala 131:29]
-    MEMBarrier.io.inWrten <= EXBarrier.io.outWrten @[core.scala 132:29]
-    MEMBarrier.io.inJ <= EXBarrier.io.outJ @[core.scala 133:29]
-    WBstage.io.aluResult <= MEMBarrier.io.outALUResult @[core.scala 136:24]
-    WBstage.io.pc4 <= UInt<1>("h0") @[core.scala 137:24]
-    WBstage.io.rd <= MEMBarrier.io.outRD @[core.scala 138:24]
-    WBstage.io.wrten <= MEMBarrier.io.outWrten @[core.scala 139:24]
-    WBstage.io.j <= MEMBarrier.io.outJ @[core.scala 140:24]
-    WBBarrier.io.inCheckRes <= WBstage.io.aluResult @[core.scala 143:31]
-    WBBarrier.io.inXcptInvalid <= MEMBarrier.io.outException @[core.scala 144:31]
-    ForwardingUnit.io.rs1_EX <= IDBarrier.io.rs1_EX @[core.scala 147:30]
-    ForwardingUnit.io.rs2_EX <= IDBarrier.io.rs2_EX @[core.scala 148:30]
-    ForwardingUnit.io.rd_MEM <= EXBarrier.io.outRD @[core.scala 150:30]
-    ForwardingUnit.io.wrEn_MEM <= EXBarrier.io.outWrten @[core.scala 151:30]
-    ForwardingUnit.io.rd_WB <= MEMBarrier.io.outRD @[core.scala 153:30]
-    ForwardingUnit.io.wrEn_WB <= MEMBarrier.io.outWrten @[core.scala 154:30]
-    EXstage.io.forwardSelA <= ForwardingUnit.io.forwardA @[core.scala 156:26]
-    EXstage.io.forwardSelB <= ForwardingUnit.io.forwardB @[core.scala 157:26]
-    EXstage.io.aluResultMEM <= EXBarrier.io.outAluResult @[core.scala 158:27]
-    EXstage.io.aluResultWB <= MEMBarrier.io.outALUResult @[core.scala 159:27]
-    node _IDBarrier_io_rs1_ID_T = bits(IDstage.io.inst, 19, 15) @[core.scala 161:41]
-    IDBarrier.io.rs1_ID <= _IDBarrier_io_rs1_ID_T @[core.scala 161:23]
-    node _IDBarrier_io_rs2_ID_T = bits(IDstage.io.inst, 24, 20) @[core.scala 162:41]
-    IDBarrier.io.rs2_ID <= _IDBarrier_io_rs2_ID_T @[core.scala 162:23]
-    io.check_res <= WBBarrier.io.outCheckRes @[core.scala 164:16]
-    io.exception <= WBBarrier.io.outXcptInvalid @[core.scala 165:16]
+    EXstage.io.pc4_in <= IDBarrier.io.outPC4 @[core.scala 120:27]
+    EXBarrier.io.inAluResult <= EXstage.io.aluResult @[core.scala 123:31]
+    EXBarrier.io.inRD <= EXstage.io.rd @[core.scala 124:31]
+    EXBarrier.io.inXcptInvalid <= EXstage.io.exception @[core.scala 125:31]
+    EXBarrier.io.inWrten <= EXstage.io.wrten @[core.scala 126:31]
+    EXBarrier.io.inJ <= EXstage.io.j_out @[core.scala 127:31]
+    EXBarrier.io.inPC4 <= EXstage.io.pc4_out @[core.scala 128:31]
+    MEMBarrier.io.inALUResult <= EXBarrier.io.outAluResult @[core.scala 131:29]
+    MEMBarrier.io.inRD <= EXBarrier.io.outRD @[core.scala 132:29]
+    MEMBarrier.io.inException <= EXBarrier.io.outXcptInvalid @[core.scala 133:29]
+    MEMBarrier.io.inWrten <= EXBarrier.io.outWrten @[core.scala 134:29]
+    MEMBarrier.io.inJ <= EXBarrier.io.outJ @[core.scala 135:29]
+    MEMBarrier.io.inPC4 <= EXBarrier.io.outPC4 @[core.scala 136:29]
+    WBstage.io.aluResult <= MEMBarrier.io.outALUResult @[core.scala 139:24]
+    WBstage.io.pc4 <= MEMBarrier.io.outPC4 @[core.scala 140:24]
+    WBstage.io.rd <= MEMBarrier.io.outRD @[core.scala 141:24]
+    WBstage.io.wrten <= MEMBarrier.io.outWrten @[core.scala 142:24]
+    WBstage.io.j <= MEMBarrier.io.outJ @[core.scala 143:24]
+    WBBarrier.io.inCheckRes <= WBstage.io.aluResult @[core.scala 146:31]
+    WBBarrier.io.inXcptInvalid <= MEMBarrier.io.outException @[core.scala 147:31]
+    ForwardingUnit.io.rs1_EX <= IDBarrier.io.rs1_EX @[core.scala 150:30]
+    ForwardingUnit.io.rs2_EX <= IDBarrier.io.rs2_EX @[core.scala 151:30]
+    ForwardingUnit.io.rd_MEM <= EXBarrier.io.outRD @[core.scala 153:30]
+    ForwardingUnit.io.wrEn_MEM <= EXBarrier.io.outWrten @[core.scala 154:30]
+    ForwardingUnit.io.rd_WB <= MEMBarrier.io.outRD @[core.scala 156:30]
+    ForwardingUnit.io.wrEn_WB <= MEMBarrier.io.outWrten @[core.scala 157:30]
+    EXstage.io.forwardSelA <= ForwardingUnit.io.forwardA @[core.scala 159:26]
+    EXstage.io.forwardSelB <= ForwardingUnit.io.forwardB @[core.scala 160:26]
+    EXstage.io.aluResultMEM <= EXBarrier.io.outAluResult @[core.scala 161:27]
+    EXstage.io.aluResultWB <= MEMBarrier.io.outALUResult @[core.scala 162:27]
+    node _IDBarrier_io_rs1_ID_T = bits(IDstage.io.inst, 19, 15) @[core.scala 164:41]
+    IDBarrier.io.rs1_ID <= _IDBarrier_io_rs1_ID_T @[core.scala 164:23]
+    node _IDBarrier_io_rs2_ID_T = bits(IDstage.io.inst, 24, 20) @[core.scala 165:41]
+    IDBarrier.io.rs2_ID <= _IDBarrier_io_rs2_ID_T @[core.scala 165:23]
+    io.check_res <= WBBarrier.io.outCheckRes @[core.scala 167:16]
+    io.exception <= WBBarrier.io.outXcptInvalid @[core.scala 168:16]
 
   module PipelinedRV32I :
     input clock : Clock
