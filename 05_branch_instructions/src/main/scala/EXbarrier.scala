@@ -41,12 +41,14 @@ class EXBarrier extends Module {
         val inXcptInvalid   = Input(Bool())
         val inWrten         = Input(Bool())
         val inJ             = Input(Bool())
+        val inPC4           = Input(UInt(32.W))
 
         val outAluResult    = Output(UInt(32.W))
         val outRD           = Output(UInt(5.W))
         val outXcptInvalid  = Output(Bool())
         val outWrten        = Output(Bool())
         val outJ            = Output(Bool())
+        val outPC4          = Output(UInt(32.W))
     })
 
     val aluResult   = RegInit(0.U(32.W))
@@ -54,16 +56,19 @@ class EXBarrier extends Module {
     val XcptInvalid = RegInit(false.B)
     val wrten       = RegInit(false.B)
     val j           = RegInit(false.B)
+    val PC4         = RegInit(0.U(32.W))
 
     aluResult   := io.inAluResult
     RD          := io.inRD
     XcptInvalid := io.inXcptInvalid
     wrten       := io.inWrten
     j           := io.inJ
+    PC4         := io.inPC4
 
     io.outAluResult     := aluResult
     io.outRD            := RD
     io.outXcptInvalid   := XcptInvalid
     io.outWrten         := wrten
     io.outJ             := j
+    io.outPC4           := PC4
 }
