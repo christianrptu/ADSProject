@@ -65,25 +65,27 @@ class ALUcontrol extends Module {
 
 class EXstage extends Module {
   val io = IO(new Bundle {
-    val operandA    = Input(UInt(32.W))
-    val operandB    = Input(UInt(32.W))   // rs2 register value
-    val immExtnd    = Input(UInt(32.W))   // sign/zero-extended immediate from ID
-    val ALUsrc      = Input(Bool())       // false = rs2, true = immediate
-    val rd_in       = Input(UInt(5.W))
-    val uop         = Input(uopc())
-    val wrten_in    = Input(Bool())       // passed through to WB
-    val XcptInvalid = Input(Bool())
-    val forwardSelA = Input(UInt(2.W)) // mux selector fordwarding unit
-    val forwardSelB = Input(UInt(2.W)) // mux selector fordwarding unit
-    val aluResultWB = Input(UInt(32.W)) // get reg from WB for fordwarding unit
-    val aluResultMEM= Input(UInt(32.W)) // get reg from MEM for fordwarding unit
-    val j_in        = Input(Bool())
+    val operandA      = Input(UInt(32.W))
+    val operandB      = Input(UInt(32.W))   // rs2 register value
+    val immExtnd      = Input(UInt(32.W))   // sign/zero-extended immediate from ID
+    val ALUsrc        = Input(Bool())       // false = rs2, true = immediate
+    val rd_in         = Input(UInt(5.W))
+    val uop           = Input(uopc())
+    val wrten_in      = Input(Bool())       // passed through to WB
+    val XcptInvalid   = Input(Bool())
+    val forwardSelA   = Input(UInt(2.W)) // mux selector fordwarding unit
+    val forwardSelB   = Input(UInt(2.W)) // mux selector fordwarding unit
+    val aluResultWB   = Input(UInt(32.W)) // get reg from WB for fordwarding unit
+    val aluResultMEM  = Input(UInt(32.W)) // get reg from MEM for fordwarding unit
+    val j_in          = Input(Bool())
+    val pc4_in        = Input(UInt(32.W))
 
-    val aluResult   = Output(UInt(32.W))
-    val exception   = Output(Bool())
-    val rd          = Output(UInt(5.W))
-    val wrten       = Output(Bool())
-    val j_out       = Output(Bool())
+    val aluResult     = Output(UInt(32.W))
+    val exception     = Output(Bool())
+    val rd            = Output(UInt(5.W))
+    val wrten         = Output(Bool())
+    val j_out         = Output(Bool())
+    val pc4_out       = Output(UInt(32.W))
   })
 
   val ALU        = Module(new ALU)
@@ -115,6 +117,7 @@ class EXstage extends Module {
   io.rd        := io.rd_in
   io.wrten     := io.wrten_in
   io.j_out     := io.j_in
+  io.pc4_out   := io.pc4_in
 }
 
 //ToDo: Add your implementation according to the specification above here
