@@ -182,6 +182,7 @@ class SignExtend extends Module {
                      io.imm_in(4,1),
                      0.U)
 
+    io.imm_out := full
     switch(io.sel){
         is(0.U){
             io.imm_out := full
@@ -247,7 +248,7 @@ class ID extends Module{
     val rs1    = io.inst(19,15)
     val rs2    = io.inst(24,20)
     val rd     = io.inst(11,7)
-    val imm12  = io.inst(31,20)        // raw 12-bit immediate field
+    val imm25  = io.inst(31,7)        // raw 25-bit immediate field
     val immJp = Cat(io.inst(31),io.inst(19,12), io.inst(20),io.inst(30,21), 0.U(2.W))
 
     val rf    = Module(new regFile)
@@ -262,7 +263,7 @@ class ID extends Module{
     cu.io.taken   := compr.io.taken
 
     // sign-extend, mode chosen by the control unit
-    sigex.io.imm_in := imm12
+    sigex.io.imm_in := imm25
     sigex.io.sel    := cu.io.immSel
 
     // register file
