@@ -77,11 +77,13 @@ class EXstage extends Module {
     val forwardSelB = Input(UInt(2.W)) // mux selector fordwarding unit
     val aluResultWB = Input(UInt(32.W)) // get reg from WB for fordwarding unit
     val aluResultMEM= Input(UInt(32.W)) // get reg from MEM for fordwarding unit
+    val j_in        = Input(Bool())
 
     val aluResult   = Output(UInt(32.W))
     val exception   = Output(Bool())
     val rd          = Output(UInt(5.W))
     val wrten       = Output(Bool())
+    val j_out       = Output(Bool())
   })
 
   val ALU        = Module(new ALU)
@@ -112,6 +114,7 @@ class EXstage extends Module {
   io.exception := io.XcptInvalid
   io.rd        := io.rd_in
   io.wrten     := io.wrten_in
+  io.j_out     := io.j_in
 }
 
 //ToDo: Add your implementation according to the specification above here
