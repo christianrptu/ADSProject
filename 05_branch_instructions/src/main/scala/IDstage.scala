@@ -54,7 +54,7 @@ class ControlUnit extends Module {
         val taken  = Input(Bool())
 
         val uop         = Output(uopc())
-        val npcSrc      = Output(UInt(3.W))
+        val npcSrc      = Output(UInt(2.W))
         val bop         = Output(Bop())    // Comparator opcodes
         val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
         val immSel      = Output(UInt(2.W))   // sign-extend block: 00: full, 01: shamt, 10: jump, 11: branch
@@ -208,7 +208,7 @@ class Comparator extends Module {
         val a       = Input(UInt(32.W))
         val b       = Input(UInt(32.W))
         val sel     = Input(Bop())
-        val taken = Output(Bool())
+        val taken   = Output(Bool())
     })
 
     io.taken := false.B
@@ -231,7 +231,8 @@ class ID extends Module{
         val write_data  = Input(UInt(32.W))
         val pc4_in         = Input(UInt(32.W))
 
-        val nPC         = Output(UInt(32.W))
+        val JumpAddr    = Output(UInt(32.W))
+        val BranchAddr  = Output(UInt(32.W))
         val npcSrc      = Output(Bool())
         val uop         = Output(uopc())
         val wrten       = Output(Bool()) //
@@ -283,8 +284,9 @@ class ID extends Module{
     compr.io.sel := cu.io.bop
 
     //Branch and jump
-    io.npcSrc    := cu.io.npcSrc                              //mux selector for the next pc(pc+4, branch, jump)
-    io.nPC := sigex.io.imm_out              // jumpAddress
+    io.npcSrc     := cu.io.npcSrc            //mux selector for the next pc(pc+4, branch, jump)
+    io.JumpAddr   := sigex.io.imm_out
+    io.BranchAddr := io.pc4_in+sigex.io.imm_out
 
     // datapath outputs
     io.operandA    := rf.io.resp_1.data

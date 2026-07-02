@@ -1,8 +1,7 @@
 module BindsTo_0_IF(
   input         clock,
   input         reset,
-  output [31:0] io_inst,
-  input  [31:0] io_nPC
+  output [31:0] io_inst
 );
 
 initial begin

@@ -45,27 +45,34 @@ class IF (BinaryFile: String) extends Module {
     val inst = Output(UInt(32.W))
     val pc4  = Output(UInt(32.W))
 
-    val nPC  = Input(UInt(32.W))
-    val nPcSel  = Input(Bool())
+    val JumpAddr    = Input(UInt(32.W))
+    val BranchAddr  = Input(UInt(32.W))
+    val nPcSel      = Input(UInt(2.W))
 
   })
+
 
 //ToDo: Add your implementation according to the specification above here
   val IMem = Mem(4096, UInt(32.W))
   loadMemoryFromFile(IMem, BinaryFile)
 
   // Fetch
-    val PC = RegInit(0.U(32.W))
-    val addr = PC >> 2
+  val PC   = RegInit(0.U(32.W))
+  val addr = PC >> 2
 
-  //next PC
-  val nPC = PC + 4.U
+  val pcP4 = PC + 4.U
 
-  //Next PC soruce Selection
-  PC := Mux(io.nPcSel, nPC, io.nPC )
+  val nPC = Wire(UInt(32.W))
+  nPC := pcP4
 
-  // next stage
-  io.pc4 := nPC
-  io.inst := IMem(addr(11,0))
+  // Next PC source mux
+  switch (io.nPcSel) {
+    is ("b01".U) { nPC := io.JumpAddr }
+    is ("b10".U) { nPC := io.BranchAddr }
+  }
 
+  PC := nPC
+
+  io.pc4 := pcP4
+  io.inst := IMem(addr(11, 0))
 }

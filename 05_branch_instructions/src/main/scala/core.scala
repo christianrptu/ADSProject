@@ -80,8 +80,9 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   val ForwardingUnit = Module(new ForwardingUnit)
 
   //IF STAGE
-  IFstage.io.nPC       := IDstage.io.nPC
-  IFstage.io.nPcSel    := IDstage.io.npcSrc
+  IFstage.io.JumpAddr   := IDstage.io.JumpAddr
+  IFstage.io.BranchAddr := IDstage.io.BranchAddr
+  IFstage.io.nPcSel     := IDstage.io.npcSrc
 
   //IF BARRIER
   IFBarrier.io.inInstr    := IFstage.io.inst
