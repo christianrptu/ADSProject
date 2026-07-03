@@ -95,6 +95,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDstage.io.rd_in        := WBstage.io.regFileReq.addr
   IDstage.io.write_data   := WBstage.io.regFileReq.data
   IDstage.io.pc4_in       := IFBarrier.io.inPC
+  IDstage.io.taken        := EXstage.io.taken
 
   //ID BARRIER
   IDBarrier.io.inUOP            := IDstage.io.uop
@@ -107,6 +108,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDBarrier.io.inImmExtnd       := IDstage.io.immExtnd
   IDBarrier.io.inJ              := IDstage.io.j
   IDBarrier.io.inPC4            := IDstage.io.pc4_out
+  IDBarrier.io.inBop            := IDstage.io.bop
 
   //EX STAGE
   EXstage.io.uop          := IDBarrier.io.outUOP
@@ -119,6 +121,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   EXstage.io.immExtnd     := IDBarrier.io.outImmExtnd
   EXstage.io.j_in         := IDBarrier.io.outJ
   EXstage.io.pc4_in       := IDBarrier.io.outPC4
+  EXstage.io.bop          := IDBarrier.io.outBop
 
   //EX BARRIER
   EXBarrier.io.inAluResult    := EXstage.io.aluResult

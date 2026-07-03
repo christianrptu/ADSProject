@@ -203,25 +203,6 @@ class SignExtend extends Module {
     }
 }
 
-class Comparator extends Module {
-    val io = IO(new Bundle {
-        val a       = Input(UInt(32.W))
-        val b       = Input(UInt(32.W))
-        val sel     = Input(Bop())
-        val taken   = Output(Bool())
-    })
-
-    io.taken := false.B
-
-    switch(io.sel) {
-        is(Bop.BEQ)  { io.taken := io.a === io.b }
-        is(Bop.BNE)  { io.taken := io.a =/= io.b }
-        is(Bop.BLT)  { io.taken := io.a.asSInt < io.b.asSInt }
-        is(Bop.BGE)  { io.taken := io.a.asSInt >= io.b.asSInt }
-        is(Bop.BLTU) { io.taken := io.a < io.b  }
-        is(Bop.BGEU) { io.taken := io.a >= io.b }
-    }
-}
 
 class ID extends Module{
     val io = IO(new Bundle{
@@ -229,7 +210,8 @@ class ID extends Module{
         val w_en        = Input(Bool())
         val rd_in       = Input(UInt(5.W))
         val write_data  = Input(UInt(32.W))
-        val pc4_in         = Input(UInt(32.W))
+        val pc4_in      = Input(UInt(32.W))
+        val taken       = Input(Bool())
 
         val JumpAddr    = Output(UInt(32.W))
         val BranchAddr  = Output(UInt(32.W))
@@ -246,6 +228,7 @@ class ID extends Module{
         val operandA    = Output(UInt(32.W))
         val operandB    = Output(UInt(32.W))
         val pc4_out     = Output(UInt(32.W))
+        val bop         = Output(Bop())
     })
 
     val opcode = io.inst(6,0)
@@ -259,13 +242,13 @@ class ID extends Module{
     val rf    = Module(new regFile)
     val cu    = Module(new ControlUnit)
     val sigex = Module(new SignExtend)
-    val compr = Module(new Comparator)
+    //val compr = Module(new Comparator)
 
     // control unit: instruction -> uop + control signals
     cu.io.opcode  := opcode
     cu.io.funct3  := funct3
     cu.io.funct7  := funct7
-    cu.io.taken   := compr.io.taken
+    cu.io.taken   := io.taken
 
     // sign-extend, mode chosen by the control unit
     sigex.io.imm_in := imm25
@@ -279,9 +262,9 @@ class ID extends Module{
     rf.io.req_3.data := io.write_data
 
     // Comparator
-    compr.io.a   := rf.io.resp_1.data
-    compr.io.b   := rf.io.resp_2.data
-    compr.io.sel := cu.io.bop
+    //compr.io.a   := rf.io.resp_1.data
+    //compr.io.b   := rf.io.resp_2.data
+    //compr.io.sel := cu.io.bop
 
     //Branch and jump
     io.npcSrc     := cu.io.npcSrc            //mux selector for the next pc(pc+4, branch, jump)
@@ -301,4 +284,5 @@ class ID extends Module{
     io.j           := cu.io.j
     io.flush       := cu.io.flush
     io.pc4_out     := io.pc4_in
+    io.bop         := cu.io.bop
 }

@@ -63,6 +63,26 @@ class ALUcontrol extends Module {
   }
 }
 
+class Comparator extends Module {
+  val io = IO(new Bundle {
+    val a       = Input(UInt(32.W))
+    val b       = Input(UInt(32.W))
+    val sel     = Input(Bop())
+    val taken   = Output(Bool())
+  })
+
+  io.taken := false.B
+
+  switch(io.sel) {
+    is(Bop.BEQ)  { io.taken := io.a === io.b }
+    is(Bop.BNE)  { io.taken := io.a =/= io.b }
+    is(Bop.BLT)  { io.taken := io.a.asSInt < io.b.asSInt }
+    is(Bop.BGE)  { io.taken := io.a.asSInt >= io.b.asSInt }
+    is(Bop.BLTU) { io.taken := io.a < io.b  }
+    is(Bop.BGEU) { io.taken := io.a >= io.b }
+  }
+}
+
 class EXstage extends Module {
   val io = IO(new Bundle {
     val operandA      = Input(UInt(32.W))
@@ -79,6 +99,7 @@ class EXstage extends Module {
     val aluResultMEM  = Input(UInt(32.W)) // get reg from MEM for fordwarding unit
     val j_in          = Input(Bool())
     val pc4_in        = Input(UInt(32.W))
+    val bop           = Input(Bop())
 
     val aluResult     = Output(UInt(32.W))
     val exception     = Output(Bool())
@@ -86,10 +107,12 @@ class EXstage extends Module {
     val wrten         = Output(Bool())
     val j_out         = Output(Bool())
     val pc4_out       = Output(UInt(32.W))
+    val taken         = Output(Bool())
   })
 
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
+  val Comp       = Module(new Comparator)
 
   ALUcontrol.io.uop := io.uop
 
@@ -112,12 +135,19 @@ class EXstage extends Module {
   ALU.io.operandB  := Mux(io.ALUsrc, io.immExtnd, srcB)  // forwarded rs2 vs. immediate
   ALU.io.operation := ALUcontrol.io.mapped
 
+  Comp.io.a        := srcA
+  Comp.io.b        := srcB
+  Comp.io.sel      := io.bop
+
   io.aluResult := ALU.io.aluResult
   io.exception := io.XcptInvalid
   io.rd        := io.rd_in
   io.wrten     := io.wrten_in
   io.j_out     := io.j_in
   io.pc4_out   := io.pc4_in
+  io.taken     := Comp.io.taken
+  //COMPARATOR
+
 }
 
 //ToDo: Add your implementation according to the specification above here
