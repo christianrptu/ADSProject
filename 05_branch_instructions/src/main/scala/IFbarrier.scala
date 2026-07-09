@@ -46,7 +46,7 @@ class IFBarrier extends Module {
   val pcPlus4Reg = RegInit(0.asUInt(32.W))
 
   when(io.CLR) {
-    instrReg   := 0.U
+    instrReg   := 19.U //NOP operation
     pcReg      := 0.U
     pcPlus4Reg := 0.U
   }.otherwise {
