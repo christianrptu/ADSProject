@@ -1,6 +1,5 @@
 # Assignment 04: Hazard Detection and Forwarding Unit
 
-
 ## Processor Architecture Overview
 
 ### 5-Stage Pipeline with Hazard Detection and Forwarding
@@ -17,7 +16,7 @@ This task is based on the classic 5-stage pipeline architecture implemented in a
 
 Add a Forwarding Unit to your RISC-V pipeline from assignment 03 that detects data hazards and resolves them by controlling input multiplexers in the EX stage. 
 Connect the Forwarding Unit and the input signals to the multiplexers accordingly in core.scala.
- 
+
 ## Project Structure
 
 ### Source Code (`src/main/scala/`)
@@ -39,23 +38,25 @@ Connect the Forwarding Unit and the input signals to the multiplexers accordingl
 ### Test Files (`src/test/`)
 
 - **`scala/`**: Chisel testbench with test programs and verification harness
+  
   - `PipelinedRISCV32I_tb.scala`: Chisel testbench for processor verification
   - Test programs in assembly format
 
 - **`programs/`**: Binary instruction files
+  
   - `BinaryFile`: Compiled test program loaded into instruction memory
 
 ## RV32I Instruction Set Coverage
 
 ### Instruction Categories
 
-| Category | Instructions | Count |
-|----------|--------------|-------|
-| **Arithmetic** | ADD, ADDI, SUB | 3 |
-| **Comparison** | SLT, SLTI, SLTU, SLTIU | 4 |
-| **Logical** | AND, ANDI, OR, ORI, XOR, XORI | 6 |
-| **Shift** | SLL, SLLI, SRL, SRLI, SRA, SRAI | 6 |
-| **Total** | | **19** |
+| Category       | Instructions                    | Count  |
+| -------------- | ------------------------------- | ------ |
+| **Arithmetic** | ADD, ADDI, SUB                  | 3      |
+| **Comparison** | SLT, SLTI, SLTU, SLTIU          | 4      |
+| **Logical**    | AND, ANDI, OR, ORI, XOR, XORI   | 6      |
+| **Shift**      | SLL, SLLI, SRL, SRLI, SRA, SRAI | 6      |
+| **Total**      |                                 | **19** |
 
 ### Not Implemented
 
@@ -71,10 +72,12 @@ Connect the Forwarding Unit and the input signals to the multiplexers accordingl
 ## Requirements
 
 - **Build Tools**:
+  
   - Scala CLI or SBT (Scala Build Tool)
   - Chisel 3.5+
 
 - **Optional Visualization**:
+  
   - GTKWave or similar for waveform viewing
   - Browser-based tools like [Surfer](https://app.surfer-project.org/)
 
@@ -100,12 +103,14 @@ sbt test
 ```
 
 This:
+
 - Loads test program from `src/test/programs/BinaryFile`
 - Runs simulation for specified number of cycles
 - Verifies expected register file values at each stage
 - Generates waveforms in `test_run_dir/`
 
 **Expected Output** (successful test):
+
 ```
 [info] PipelinedRISCV32ITest: PipelinedRV32I_Tester should work
 [info] Run completed successfully.
@@ -115,11 +120,10 @@ This:
 
 - **Chisel tests**: VCD files in `test_run_dir/<Test_Name>/PipelinedRV32I.vcd`
 - Open with GTKWave:
+  
   ```bash
   gtkwave test_run_dir/*/PipelinedRV32I.vcd
   ```
-
-
 
 ## Test Coverage
 

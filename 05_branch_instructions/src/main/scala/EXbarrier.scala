@@ -39,26 +39,26 @@ class EXBarrier extends Module {
     val ALUResultE   = Input(UInt(32.W))
     val rdE          = Input(UInt(5.W))
     val XcptInvalidE = Input(Bool())
-    val RegWriteE    = Input(Bool())
+    val WriteEnableE    = Input(Bool())
 
     val ALUResultM   = Output(UInt(32.W))
     val rdM          = Output(UInt(5.W))
     val XcptInvalidM = Output(Bool())
-    val RegWriteM    = Output(Bool())
+    val WriteEnableM    = Output(Bool())
   })
 
   val ALUResult   = RegInit(0.U(32.W))
   val rd          = RegInit(0.U(5.W))
   val XcptInvalid = RegInit(false.B)
-  val RegWrite    = RegInit(false.B)
+  val WriteEnable = RegInit(false.B)
 
   ALUResult   := io.ALUResultE
   rd          := io.rdE
   XcptInvalid := io.XcptInvalidE
-  RegWrite    := io.RegWriteE
+  WriteEnable := io.WriteEnableE
 
   io.ALUResultM   := ALUResult
   io.rdM          := rd
   io.XcptInvalidM := XcptInvalid
-  io.RegWriteM    := RegWrite
+  io.WriteEnableM := WriteEnable
 }

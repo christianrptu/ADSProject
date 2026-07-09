@@ -29,7 +29,7 @@ class PipelinedRV32I (BinaryFile: String) extends Module {
     val JumpEdebug     = Output(Bool())
     val PCSrcEdebug    = Output(Bool())
     val PCTargetEdebug = Output(UInt(32.W))
-    val RegWriteWdebug = Output(Bool())
+    val WriteEnableWdebug = Output(Bool())
     val rdWdebug       = Output(UInt(5.W))
   })
 
@@ -46,7 +46,7 @@ class PipelinedRV32I (BinaryFile: String) extends Module {
   io.JumpEdebug     := core.io.JumpEdebug
   io.PCSrcEdebug    := core.io.PCSrcEdebug
   io.PCTargetEdebug := core.io.PCTargetEdebug
-  io.RegWriteWdebug := core.io.RegWriteWdebug
+  io.WriteEnableWdebug := core.io.WriteEnableWdebug
   io.rdWdebug       := core.io.rdWdebug
 
 }
