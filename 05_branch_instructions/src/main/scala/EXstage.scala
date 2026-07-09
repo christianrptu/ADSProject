@@ -46,9 +46,7 @@ class ALUcontrol extends Module {
     val uop    = Input(uopc())
     val mapped = Output(ALUOp())
   })
-
-    io.mapped := ALUOp.ADD // default works like ADD, which is the same as NOP
-
+  io.mapped := ALUOp.ADD
   switch(io.uop) {
     is(uopc.ADD,  uopc.ADDI)  { io.mapped := ALUOp.ADD  }
     is(uopc.SUB)              { io.mapped := ALUOp.SUB  }
@@ -60,94 +58,72 @@ class ALUcontrol extends Module {
     is(uopc.SRA,  uopc.SRAI)  { io.mapped := ALUOp.SRA  }
     is(uopc.SLT,  uopc.SLTI)  { io.mapped := ALUOp.SLT  }
     is(uopc.SLTU, uopc.SLTIU) { io.mapped := ALUOp.SLTU }
+    is(uopc.BEQ)  { io.mapped := ALUOp.BEQ  }
+    is(uopc.BNE)  { io.mapped := ALUOp.BNE  }
+    is(uopc.BLT)  { io.mapped := ALUOp.BLT  }
+    is(uopc.BGE)  { io.mapped := ALUOp.BGE  }
+    is(uopc.BLTU) { io.mapped := ALUOp.BLTU }
+    is(uopc.BGEU) { io.mapped := ALUOp.BGEU }
+    is(uopc.JAL,  uopc.JALR)  { io.mapped := ALUOp.ADD  }
   }
 }
-
-class Comparator extends Module {
-  val io = IO(new Bundle {
-    val a       = Input(UInt(32.W))
-    val b       = Input(UInt(32.W))
-    val sel     = Input(Bop())
-    val taken   = Output(Bool())
-  })
-
-  io.taken := false.B
-
-  switch(io.sel) {
-    is(Bop.BEQ)  { io.taken := io.a === io.b }
-    is(Bop.BNE)  { io.taken := io.a =/= io.b }
-    is(Bop.BLT)  { io.taken := io.a.asSInt < io.b.asSInt }
-    is(Bop.BGE)  { io.taken := io.a.asSInt >= io.b.asSInt }
-    is(Bop.BLTU) { io.taken := io.a < io.b  }
-    is(Bop.BGEU) { io.taken := io.a >= io.b }
-  }
-}
-
 class EXstage extends Module {
   val io = IO(new Bundle {
-    val operandA      = Input(UInt(32.W))
-    val operandB      = Input(UInt(32.W))   // rs2 register value
-    val immExtnd      = Input(UInt(32.W))   // sign/zero-extended immediate from ID
-    val ALUsrc        = Input(Bool())       // false = rs2, true = immediate
-    val rd_in         = Input(UInt(5.W))
-    val uop           = Input(uopc())
-    val wrten_in      = Input(Bool())       // passed through to WB
-    val XcptInvalid   = Input(Bool())
-    val forwardSelA   = Input(UInt(2.W)) // mux selector fordwarding unit
-    val forwardSelB   = Input(UInt(2.W)) // mux selector fordwarding unit
-    val aluResultWB   = Input(UInt(32.W)) // get reg from WB for fordwarding unit
-    val aluResultMEM  = Input(UInt(32.W)) // get reg from MEM for fordwarding unit
-    val j_in          = Input(Bool())
-    val pc4_in        = Input(UInt(32.W))
-    val bop           = Input(Bop())
+    val RD1E        = Input(UInt(32.W))
+    val RD2E        = Input(UInt(32.W))
+    val ImmExtE     = Input(UInt(32.W))
+    val ALUSrcE     = Input(Bool())
+    val rdE         = Input(UInt(5.W))
+    val uopE        = Input(uopc())
+    val RegWriteE   = Input(Bool())
+    val XcptInvalidE= Input(Bool())
+    val ForwardAE   = Input(UInt(2.W))
+    val ForwardBE   = Input(UInt(2.W))
+    val ResultW     = Input(UInt(32.W))
+    val ALUResultM  = Input(UInt(32.W))
+    val PCE         = Input(UInt(32.W))
+    val PCPlus4E    = Input(UInt(32.W))
+    val BranchE     = Input(Bool())
+    val JumpE       = Input(Bool())
 
-    val aluResult     = Output(UInt(32.W))
-    val exception     = Output(Bool())
-    val rd            = Output(UInt(5.W))
-    val wrten         = Output(Bool())
-    val j_out         = Output(Bool())
-    val pc4_out       = Output(UInt(32.W))
-    val taken         = Output(Bool())
+    val ALUResultE  = Output(UInt(32.W))
+    val exceptionE  = Output(Bool())
+    val rdOutE      = Output(UInt(5.W))
+    val RegWriteOutE= Output(Bool())
+    val PCSrcE      = Output(Bool())
+    val PCTargetE   = Output(UInt(32.W))
   })
-
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
-  val Comp       = Module(new Comparator)
-
-  ALUcontrol.io.uop := io.uop
+  ALUcontrol.io.uop := io.uopE
 
   val srcA = Wire(UInt(32.W))
   val srcB = Wire(UInt(32.W))
-
-  srcA := io.operandA  // b00 default
-  switch(io.forwardSelA) {
-    is("b10".U) { srcA := io.aluResultMEM } // forward from MEM
-    is("b01".U) { srcA := io.aluResultWB }  // forward from WB
+  srcA := io.RD1E
+  switch(io.ForwardAE) {
+    is("b10".U) { srcA := io.ALUResultM }
+    is("b01".U) { srcA := io.ResultW }
   }
-
-  srcB := io.operandB // b00 default
-  switch(io.forwardSelB) {
-    is("b10".U) { srcB := io.aluResultMEM }
-    is("b01".U) { srcB := io.aluResultWB }
+  srcB := io.RD2E
+  switch(io.ForwardBE) {
+    is("b10".U) { srcB := io.ALUResultM }
+    is("b01".U) { srcB := io.ResultW }
   }
 
   ALU.io.operandA  := srcA
-  ALU.io.operandB  := Mux(io.ALUsrc, io.immExtnd, srcB)  // forwarded rs2 vs. immediate
+  ALU.io.operandB  := Mux(io.ALUSrcE, io.ImmExtE, srcB)
   ALU.io.operation := ALUcontrol.io.mapped
 
-  Comp.io.a        := srcA
-  Comp.io.b        := srcB
-  Comp.io.sel      := io.bop
+  val jalr = io.JumpE && io.BranchE  // JALR condition
+  val pcTargetAdder = io.PCE + io.ImmExtE   // pc + imm, for branches/JAL
 
-  io.aluResult := ALU.io.aluResult
-  io.exception := io.XcptInvalid
-  io.rd        := io.rd_in
-  io.wrten     := io.wrten_in
-  io.j_out     := io.j_in
-  io.pc4_out   := io.pc4_in
-  io.taken     := Comp.io.taken
-  //COMPARATOR
+  io.PCSrcE    := (io.BranchE && ALU.io.zero) || io.JumpE
+  io.PCTargetE := Mux(jalr, (ALU.io.aluResult & ~1.U(32.W)), pcTargetAdder)
 
+  io.ALUResultE   := Mux(io.JumpE, io.PCPlus4E, ALU.io.aluResult)  // rd = pc+4 for JAL/JALR
+  io.exceptionE   := io.XcptInvalidE
+  io.rdOutE       := io.rdE
+  io.RegWriteOutE := io.RegWriteE
 }
 
 //ToDo: Add your implementation according to the specification above here

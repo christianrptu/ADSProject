@@ -30,25 +30,32 @@ import chisel3._
 
 class IFBarrier extends Module {
   val io = IO(new Bundle {
-    val flush    = Input(Bool())
-    val inInstr  = Input(UInt(32.W))
-    val inPC     = Input(UInt(32.W))
-    val outInstr = Output(UInt(32.W))
-    val outPC    = Output(UInt(32.W))
+    val InstrF    = Input(UInt(32.W))
+    val PCF       = Input(UInt(32.W))
+    val PCPlus4F  = Input(UInt(32.W))
+    val CLR       = Input(Bool())
+
+    val InstrD    = Output(UInt(32.W))
+    val PCD       = Output(UInt(32.W))
+    val PCPlus4D  = Output(UInt(32.W))
   })
 
-//ToDo: Add your implementation according to the specification above here
-  val instrReg = RegInit(0.asUInt(32.W))
-  val pcReg    = RegInit(0.asUInt(32.W))
+  //ToDo: Add your implementation above here
+  val instrReg   = RegInit(0.asUInt(32.W))
+  val pcReg      = RegInit(0.asUInt(32.W))
+  val pcPlus4Reg = RegInit(0.asUInt(32.W))
 
-  when (io.flush === false.B){
-    instrReg    := io.inInstr
-    pcReg       := io.inPC
-  }.otherwise{
-    instrReg    := 0.U
-    pcReg       := 0.U
+  when(io.CLR) {
+    instrReg   := 0.U
+    pcReg      := 0.U
+    pcPlus4Reg := 0.U
+  }.otherwise {
+    instrReg   := io.InstrF
+    pcReg      := io.PCF
+    pcPlus4Reg := io.PCPlus4F
   }
-  
-    io.outInstr := instrReg
-    io.outPC    := pcReg
+
+  io.InstrD   := instrReg
+  io.PCD      := pcReg
+  io.PCPlus4D := pcPlus4Reg
 }

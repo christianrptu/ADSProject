@@ -35,40 +35,30 @@ import chisel3._
 // -----------------------------------------
 
 class EXBarrier extends Module {
-    val io = IO(new Bundle {
-        val inAluResult     = Input(UInt(32.W))
-        val inRD            = Input(UInt(5.W))
-        val inXcptInvalid   = Input(Bool())
-        val inWrten         = Input(Bool())
-        val inJ             = Input(Bool())
-        val inPC4           = Input(UInt(32.W))
+  val io = IO(new Bundle {
+    val ALUResultE   = Input(UInt(32.W))
+    val rdE          = Input(UInt(5.W))
+    val XcptInvalidE = Input(Bool())
+    val RegWriteE    = Input(Bool())
 
-        val outAluResult    = Output(UInt(32.W))
-        val outRD           = Output(UInt(5.W))
-        val outXcptInvalid  = Output(Bool())
-        val outWrten        = Output(Bool())
-        val outJ            = Output(Bool())
-        val outPC4          = Output(UInt(32.W))
-    })
+    val ALUResultM   = Output(UInt(32.W))
+    val rdM          = Output(UInt(5.W))
+    val XcptInvalidM = Output(Bool())
+    val RegWriteM    = Output(Bool())
+  })
 
-    val aluResult   = RegInit(0.U(32.W))
-    val RD          = RegInit(0.U(5.W))
-    val XcptInvalid = RegInit(false.B)
-    val wrten       = RegInit(false.B)
-    val j           = RegInit(false.B)
-    val PC4         = RegInit(0.U(32.W))
+  val ALUResult   = RegInit(0.U(32.W))
+  val rd          = RegInit(0.U(5.W))
+  val XcptInvalid = RegInit(false.B)
+  val RegWrite    = RegInit(false.B)
 
-    aluResult   := io.inAluResult
-    RD          := io.inRD
-    XcptInvalid := io.inXcptInvalid
-    wrten       := io.inWrten
-    j           := io.inJ
-    PC4         := io.inPC4
+  ALUResult   := io.ALUResultE
+  rd          := io.rdE
+  XcptInvalid := io.XcptInvalidE
+  RegWrite    := io.RegWriteE
 
-    io.outAluResult     := aluResult
-    io.outRD            := RD
-    io.outXcptInvalid   := XcptInvalid
-    io.outWrten         := wrten
-    io.outJ             := j
-    io.outPC4           := PC4
+  io.ALUResultM   := ALUResult
+  io.rdM          := rd
+  io.XcptInvalidM := XcptInvalid
+  io.RegWriteM    := RegWrite
 }

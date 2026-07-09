@@ -43,32 +43,20 @@ import chisel3._
 //ToDo: Add your implementation according to the specification above here
 
 class WBstage extends Module {
-    val io = IO(new Bundle {
-        val aluResult  = Input(UInt(32.W))
-        val pc4        = Input(UInt(32.W))
-        val rd         = Input(UInt(5.W))
-        val wrten      = Input(Bool())
-        val j          = Input(Bool())
+  val io = IO(new Bundle {
+    val ALUResultW = Input(UInt(32.W))
+    val rdW        = Input(UInt(5.W))
+    val RegWriteW  = Input(Bool())
 
-        val regFileReq = new Bundle {
-            val addr = Output(UInt(5.W))
-            val data = Output(UInt(32.W))
-            val w_en = Output(Bool())
-        }
-        val check_res = Output(UInt(32.W))
-    })
-
-    val mux_out = RegInit(0.U(32.W))
-
-    when (io.j === true.B){
-        mux_out := io.pc4
-    }.
-    otherwise{
-        mux_out := io.aluResult
+    val RegWriteReq = new Bundle {
+      val addr = Output(UInt(5.W))
+      val data = Output(UInt(32.W))
+      val w_en = Output(Bool())
     }
-
-    io.regFileReq.addr := io.rd
-    io.regFileReq.data := io.aluResult
-    io.regFileReq.w_en := io.wrten
-    io.check_res       := mux_out
+    val ResultW = Output(UInt(32.W))
+  })
+  io.RegWriteReq.addr := io.rdW
+  io.RegWriteReq.data := io.ALUResultW
+  io.RegWriteReq.w_en := io.RegWriteW
+  io.ResultW           := io.ALUResultW
 }

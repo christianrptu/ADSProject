@@ -34,45 +34,37 @@ package core_tile
 
 import chisel3._
 import chisel3.util.experimental.loadMemoryFromFile
-import chisel3.util._
 
 // -----------------------------------------
 // Fetch Stage
 // -----------------------------------------
 
+
 class IF (BinaryFile: String) extends Module {
   val io = IO(new Bundle {
-    val inst = Output(UInt(32.W))
-    val pc4  = Output(UInt(32.W))
+    val PCSrcE    = Input(Bool())
+    val PCTargetE = Input(UInt(32.W))
 
-    val JumpAddr    = Input(UInt(32.W))
-    val BranchAddr  = Input(UInt(32.W))
-    val nPcSel      = Input(UInt(2.W))
-
+    val InstrF    = Output(UInt(32.W))
+    val PCF       = Output(UInt(32.W))
+    val PCPlus4F  = Output(UInt(32.W))
   })
 
-
-//ToDo: Add your implementation according to the specification above here
+  //ToDo: Add your implementation according to the specification above here
   val IMem = Mem(4096, UInt(32.W))
   loadMemoryFromFile(IMem, BinaryFile)
 
-  // Fetch
-  val PC   = RegInit(0.U(32.W))
+  val PC = RegInit(0.U(32.W))
+
   val addr = PC >> 2
 
-  val pcP4 = PC + 4.U
+  io.InstrF := IMem(addr(11,0))
 
-  val nPC = Wire(UInt(32.W))
-  nPC := pcP4
+  val PCPlus4 = PC + 4.U
+  val PCNext  = Mux(io.PCSrcE, io.PCTargetE, PCPlus4)
 
-  // Next PC source mux
-  switch (io.nPcSel) {
-    is ("b01".U) { nPC := io.JumpAddr }
-    is ("b10".U) { nPC := io.BranchAddr }
-  }
+  PC := PCNext
 
-  PC := nPC
-
-  io.pc4 := pcP4
-  io.inst := IMem(addr(11, 0))
+  io.PCF      := PC
+  io.PCPlus4F := PCPlus4
 }

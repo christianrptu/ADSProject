@@ -40,7 +40,6 @@ package core_tile
 import chisel3._
 import chisel3.util._
 import uopc._
-import Bop._
 
 // -----------------------------------------
 // Decode Stage
@@ -51,34 +50,33 @@ class ControlUnit extends Module {
         val opcode = Input(UInt(7.W))
         val funct3 = Input(UInt(3.W))
         val funct7 = Input(UInt(7.W))
-        val taken  = Input(Bool())
 
         val uop         = Output(uopc())
-        val npcSrc      = Output(UInt(2.W))
-        val bop         = Output(Bop())    // Comparator opcodes
-        val ALUsrc      = Output(Bool())   // operandB: true = immediate, false = rs2
-        val immSel      = Output(UInt(2.W))   // sign-extend block: 00: full, 01: shamt, 10: jump, 11: branch
-        val flush       = Output(Bool())
-        val j           = Output(Bool())
+        val ALUSrcD     = Output(Bool())   // operandB: true = immediate, false = rs2
+        val immSel      = Output(UInt(2.W))   // 00: full, 01: shamt, 10: jump, 11: branch
+        val BranchD     = Output(Bool())
+        val JumpD       = Output(Bool())
+        val RegWriteD   = Output(Bool())
         val XcptInvalid = Output(Bool())
     })
 
-    val OPC_R = "b0110011".U
-    val OPC_I = "b0010011".U
-    val OPC_B = "b1100011".U
+    val OPC_R    = "b0110011".U
+    val OPC_I    = "b0010011".U
+    val OPC_B    = "b1100011".U
     val OPC_JAL  = "b1101111".U
-    val OPC_JARL = "b1100111".U 
+    val OPC_JALR = "b1100111".U
 
     io.uop         := uopc.INVALID
-    io.bop         := Bop.BEQ
-    io.ALUsrc      := false.B
+    io.ALUSrcD     := false.B
     io.immSel      := 0.U
-    io.flush       := false.B
-    io.j           := false.B
+    io.BranchD     := false.B
+    io.JumpD       := false.B
+    io.RegWriteD   := false.B
     io.XcptInvalid := true.B
 
     switch(io.opcode){
         is(OPC_R){
+            io.RegWriteD := true.B
             when(io.funct7 === "b0000000".U){
                 switch(io.funct3){
                     is("b000".U){ io.uop := uopc.ADD;  io.XcptInvalid := false.B }
@@ -98,7 +96,8 @@ class ControlUnit extends Module {
             }
         }
         is(OPC_I){
-            io.ALUsrc := true.B                       //
+            io.ALUSrcD   := true.B
+            io.RegWriteD := true.B
             switch(io.funct3){
                 is("b000".U){ io.uop := uopc.ADDI;  io.XcptInvalid := false.B }
                 is("b010".U){ io.uop := uopc.SLTI;  io.XcptInvalid := false.B }
@@ -121,114 +120,82 @@ class ControlUnit extends Module {
             }
         }
         is(OPC_B){
-            io.immSel := 3.U //B-Type imm calculation
+            io.immSel  := 3.U   // B-Type imm calculation
+            io.BranchD := true.B
+            // RegWriteD stays false: B-type has no rd field, inst[11:7] is imm bits
             switch(io.funct3){
-                is("b000".U){ io.bop := Bop.BEQ;  io.XcptInvalid := false.B }
-                is("b001".U){ io.bop := Bop.BNE;  io.XcptInvalid := false.B }
-                is("b100".U){ io.bop := Bop.BLT;  io.XcptInvalid := false.B }
-                is("b101".U){ io.bop := Bop.BGE;  io.XcptInvalid := false.B }
-                is("b110".U){ io.bop := Bop.BLTU; io.XcptInvalid := false.B }
-                is("b111".U){ io.bop := Bop.BGEU; io.XcptInvalid := false.B }
-            }
-            when(io.taken === "b1".U){
-                io.npcSrc := "b10".U //if it's a branch inst AND the branchComparison is true
-                io.flush  := true.B
+                is("b000".U){ io.uop := uopc.BEQ;  io.XcptInvalid := false.B }
+                is("b001".U){ io.uop := uopc.BNE;  io.XcptInvalid := false.B }
+                is("b100".U){ io.uop := uopc.BLT;  io.XcptInvalid := false.B }
+                is("b101".U){ io.uop := uopc.BGE;  io.XcptInvalid := false.B }
+                is("b110".U){ io.uop := uopc.BLTU; io.XcptInvalid := false.B }
+                is("b111".U){ io.uop := uopc.BGEU; io.XcptInvalid := false.B }
             }
         }
         is(OPC_JAL){
-            io.immSel := 2.U //J-Type imm calculation
+            io.immSel      := 2.U   // J-Type imm calculation
+            io.JumpD       := true.B
+            io.RegWriteD   := true.B  // writes pc+4 to rd
+            io.uop         := uopc.JAL
             io.XcptInvalid := false.B
-            io.npcSrc := "b01".U
-            io.j      := true.B
         }
-        is(OPC_JARL){
-            //immSel stays default (0.U) because JARL is I-Type encoded
+        is(OPC_JALR){
+            // immSel stays default (0.U) -> JALR is I-Type encoded
+            io.ALUSrcD     := true.B
+            io.JumpD       := true.B
+            io.BranchD     := true.B
+            io.RegWriteD   := true.B  // writes pc+4 to rd
+            io.uop         := uopc.JALR
             io.XcptInvalid := false.B
-            io.npcSrc := "b01".U
-            io.j      := true.B
         }
     }
-    
-    //Next PC source Sel default
-    io.npcSrc := "b00".U // b00 default
-
 }
-
-//OLD SIGN EXTEND
-/*class SignExtend extends Module {
-    val io = IO(new Bundle {
-        val imm_in  = Input(UInt(12.W))    // inst[31:20]
-        val sel     = Input(Bool())         // false = full sign-ext imm, true = shamt (zero-ext)
-        val imm_out = Output(UInt(32.W))
-    })
-    val full  = Cat(Fill(20, io.imm_in(11)), io.imm_in)   // 12-bit signed immediate
-    val shamt = Cat(0.U(27.W), io.imm_in(4,0))            // 5-bit shamt, zero-extended
-    io.imm_out := Mux(io.sel, shamt, full)
-}*/
 
 class SignExtend extends Module {
     val io = IO(new Bundle {
-        val imm_in  = Input(UInt(25.W)) //TAKING [31:7]
+        val imm_in  = Input(UInt(25.W))    // inst[31:7]
         val sel     = Input(UInt(2.W))
         val imm_out = Output(UInt(32.W))
     })
-    val full       = Cat(Fill(20, io.imm_in(24)), io.imm_in(24,13))   // 12-bit signed immediate
-    val shamt      = Cat(0.U(27.W), io.imm_in(17,13))            // 5-bit shamt, zero-extended
-    val jump_cat   = Cat(io.imm_in(24),
-                     io.imm_in(12,5),
-                     io.imm_in(13),
-                     io.imm_in(23,14))
-    val jump_imm   = Cat(Fill(11, jump_cat(19)), jump_cat, 0.U) //20-bit jump
-    val branch_imm = Cat(Fill(19, io.imm_in(24)),               //
-                     io.imm_in(24),
-                     io.imm_in(0),
-                     io.imm_in(23,18),
-                     io.imm_in(4,1),
-                     0.U)
+
+    val full       = Cat(Fill(20, io.imm_in(24)), io.imm_in(24,13))   // I-type, 12-bit signed immediate
+    val shamt      = Cat(0.U(27.W), io.imm_in(17,13))                 // 5-bit shamt, zero-extended
+    val jump_cat   = Cat(io.imm_in(24), io.imm_in(12,5), io.imm_in(13), io.imm_in(23,14))
+    val jump_imm   = Cat(Fill(11, jump_cat(19)), jump_cat, 0.U)       // J-type, 20-bit
+    val branch_imm = Cat(Fill(19, io.imm_in(24)), io.imm_in(24), io.imm_in(0), io.imm_in(23,18), io.imm_in(4,1), 0.U)
 
     io.imm_out := full
+
     switch(io.sel){
-        is(0.U){
-            io.imm_out := full
-        }
-        is(1.U){
-            io.imm_out := shamt
-        }
-        is(2.U){
-            io.imm_out := jump_imm
-        }
-        is(3.U){
-            io.imm_out := branch_imm
-        }
+        is(0.U){io.imm_out := full }
+        is(1.U){io.imm_out := shamt }
+        is(2.U){io.imm_out := jump_imm }
+        is(3.U){io.imm_out := branch_imm }
     }
 }
 
-
 class ID extends Module{
     val io = IO(new Bundle{
-        val inst        = Input(UInt(32.W))
-        val w_en        = Input(Bool())
-        val rd_in       = Input(UInt(5.W))
-        val write_data  = Input(UInt(32.W))
-        val pc4_in      = Input(UInt(32.W))
-        val taken       = Input(Bool())
+        val inst           = Input(UInt(32.W))
+        val pcD            = Input(UInt(32.W))
+        val pcPlus4D       = Input(UInt(32.W))
+        val RegWriteW      = Input(Bool())      // write enable for the instruction currently in WB
+        val rdW            = Input(UInt(5.W))
+        val ResultW        = Input(UInt(32.W))
 
-        val JumpAddr    = Output(UInt(32.W))
-        val BranchAddr  = Output(UInt(32.W))
-        val npcSrc      = Output(Bool())
-        val uop         = Output(uopc())
-        val wrten       = Output(Bool()) //
-        val ALUsrc      = Output(Bool()) //
-        val immExtnd    = Output(UInt(32.W)) //
-        val XcptInvalid = Output(Bool())
+        val uop           = Output(uopc())
+        val RegWriteD     = Output(Bool())
+        val ALUSrcD       = Output(Bool())
+        val ImmExtD       = Output(UInt(32.W))
+        val BranchD       = Output(Bool())
+        val JumpD         = Output(Bool())
+        val XcptInvalid   = Output(Bool())
 
-        val flush       = Output(Bool())
-        val j           = Output(Bool())
-        val rd_out      = Output(UInt(5.W))
-        val operandA    = Output(UInt(32.W))
-        val operandB    = Output(UInt(32.W))
-        val pc4_out     = Output(UInt(32.W))
-        val bop         = Output(Bop())
+        val rdD           = Output(UInt(5.W))
+        val RD1D          = Output(UInt(32.W))
+        val RD2D          = Output(UInt(32.W))
+        val pcD_out        = Output(UInt(32.W))
+        val pcPlus4D_out   = Output(UInt(32.W))
     })
 
     val opcode = io.inst(6,0)
@@ -237,52 +204,34 @@ class ID extends Module{
     val rs1    = io.inst(19,15)
     val rs2    = io.inst(24,20)
     val rd     = io.inst(11,7)
-    val imm25  = io.inst(31,7)        // raw 25-bit immediate field
 
-    val rf    = Module(new regFile)
-    val cu    = Module(new ControlUnit)
+    val rf   = Module(new regFile)
+    val cu   = Module(new ControlUnit)
     val sigex = Module(new SignExtend)
-    //val compr = Module(new Comparator)
 
-    // control unit: instruction -> uop + control signals
-    cu.io.opcode  := opcode
-    cu.io.funct3  := funct3
-    cu.io.funct7  := funct7
-    cu.io.taken   := io.taken
+    cu.io.opcode := opcode
+    cu.io.funct3 := funct3
+    cu.io.funct7 := funct7
 
-    // sign-extend, mode chosen by the control unit
-    sigex.io.imm_in := imm25
+    sigex.io.imm_in := io.inst(31,7)
     sigex.io.sel    := cu.io.immSel
 
-    // register file
     rf.io.req_1.addr := rs1
     rf.io.req_2.addr := rs2
-    rf.io.req_3.addr := io.rd_in
-    rf.io.req_3.w_en := io.w_en
-    rf.io.req_3.data := io.write_data
+    rf.io.req_3.addr := io.rdW
+    rf.io.req_3.w_en := io.RegWriteW
+    rf.io.req_3.data := io.ResultW
 
-    // Comparator
-    //compr.io.a   := rf.io.resp_1.data
-    //compr.io.b   := rf.io.resp_2.data
-    //compr.io.sel := cu.io.bop
-
-    //Branch and jump
-    io.npcSrc     := cu.io.npcSrc            //mux selector for the next pc(pc+4, branch, jump)
-    io.JumpAddr   := sigex.io.imm_out
-    io.BranchAddr := io.pc4_in+sigex.io.imm_out
-
-    // datapath outputs
-    io.operandA    := rf.io.resp_1.data
-    io.operandB    := rf.io.resp_2.data
-    io.rd_out      := rd
+    io.RD1D        := rf.io.resp_1.data
+    io.RD2D        := rf.io.resp_2.data
+    io.rdD         := rd
     io.uop         := cu.io.uop
     io.XcptInvalid := cu.io.XcptInvalid
-    io.immExtnd    := sigex.io.imm_out
-    io.wrten       := true.B //HARDWIRED TO 1 BECAUSE WE ONLY DO R-TYPE AND I-TYPE
-    io.ALUsrc      := cu.io.ALUsrc
-
-    io.j           := cu.io.j
-    io.flush       := cu.io.flush
-    io.pc4_out     := io.pc4_in
-    io.bop         := cu.io.bop
+    io.ImmExtD     := sigex.io.imm_out
+    io.RegWriteD   := cu.io.RegWriteD
+    io.ALUSrcD     := cu.io.ALUSrcD
+    io.BranchD     := cu.io.BranchD
+    io.JumpD       := cu.io.JumpD
+    io.pcD_out      := io.pcD
+    io.pcPlus4D_out := io.pcPlus4D
 }

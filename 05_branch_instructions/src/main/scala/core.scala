@@ -55,11 +55,28 @@ import chisel3.util.experimental.loadMemoryFromFile
 import Assignment02.{ALU, ALUOp}
 import uopc._
 
+// ADS I Class Project
+// Pipelined RISC-V Core
+//
+// Chair of Electronic Design Automation, RPTU in Kaiserslautern
+// File created on 01/15/2023 by Tobias Jauch (@tojauch)
+
 
 class PipelinedRV32Icore (BinaryFile: String) extends Module {
   val io = IO(new Bundle {
     val check_res = Output(UInt(32.W))
     val exception = Output(Bool())
+    val PCdebug        = Output(UInt(32.W))
+    val InstrDdebug    = Output(UInt(32.W))
+    val PCEdebug       = Output(UInt(32.W))
+    val RS1Edebug      = Output(UInt(32.W))
+    val RS2Edebug      = Output(UInt(32.W))
+    val BranchEdebug   = Output(Bool())
+    val JumpEdebug     = Output(Bool())
+    val PCSrcEdebug    = Output(Bool())
+    val PCTargetEdebug = Output(UInt(32.W))
+    val RegWriteWdebug = Output(Bool())
+    val rdWdebug       = Output(UInt(5.W))
   })
 
   val IFstage   = Module(new IF(BinaryFile: String))
@@ -80,94 +97,104 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   val ForwardingUnit = Module(new ForwardingUnit)
 
   //IF STAGE
-  IFstage.io.JumpAddr   := IDstage.io.JumpAddr
-  IFstage.io.BranchAddr := IDstage.io.BranchAddr
-  IFstage.io.nPcSel     := IDstage.io.npcSrc
+  IFstage.io.PCSrcE    := EXstage.io.PCSrcE
+  IFstage.io.PCTargetE := EXstage.io.PCTargetE
 
   //IF BARRIER
-  IFBarrier.io.inInstr    := IFstage.io.inst
-  IFBarrier.io.inPC       := IFstage.io.pc4
-  IFBarrier.io.flush      := IDstage.io.flush
+  IFBarrier.io.InstrF   := IFstage.io.InstrF
+  IFBarrier.io.PCF      := IFstage.io.PCF
+  IFBarrier.io.PCPlus4F := IFstage.io.PCPlus4F
+  IFBarrier.io.CLR      := EXstage.io.PCSrcE
 
   //ID STAGE
-  IDstage.io.inst         := IFBarrier.io.outInstr
-  IDstage.io.w_en         := WBstage.io.regFileReq.w_en
-  IDstage.io.rd_in        := WBstage.io.regFileReq.addr
-  IDstage.io.write_data   := WBstage.io.regFileReq.data
-  IDstage.io.pc4_in       := IFBarrier.io.inPC
-  IDstage.io.taken        := EXstage.io.taken
+  IDstage.io.inst        := IFBarrier.io.InstrD
+  IDstage.io.pcD         := IFBarrier.io.PCD
+  IDstage.io.pcPlus4D    := IFBarrier.io.PCPlus4D
+  IDstage.io.RegWriteW   := WBstage.io.RegWriteReq.w_en
+  IDstage.io.rdW         := WBstage.io.RegWriteReq.addr
+  IDstage.io.ResultW     := WBstage.io.RegWriteReq.data
 
   //ID BARRIER
-  IDBarrier.io.inUOP            := IDstage.io.uop
-  IDBarrier.io.inRD             := IDstage.io.rd_out
-  IDBarrier.io.inXcptInvalid    := IDstage.io.XcptInvalid
-  IDBarrier.io.inOperandA       := IDstage.io.operandA
-  IDBarrier.io.inOperandB       := IDstage.io.operandB
-  IDBarrier.io.inWrten          := IDstage.io.wrten
-  IDBarrier.io.inALUsrc         := IDstage.io.ALUsrc
-  IDBarrier.io.inImmExtnd       := IDstage.io.immExtnd
-  IDBarrier.io.inJ              := IDstage.io.j
-  IDBarrier.io.inPC4            := IDstage.io.pc4_out
-  IDBarrier.io.inBop            := IDstage.io.bop
+  IDBarrier.io.uopD         := IDstage.io.uop
+  IDBarrier.io.rdD          := IDstage.io.rdD
+  IDBarrier.io.RD1D         := IDstage.io.RD1D
+  IDBarrier.io.RD2D         := IDstage.io.RD2D
+  IDBarrier.io.XcptInvalidD := IDstage.io.XcptInvalid
+  IDBarrier.io.RegWriteD    := IDstage.io.RegWriteD
+  IDBarrier.io.ALUSrcD      := IDstage.io.ALUSrcD
+  IDBarrier.io.ImmExtD      := IDstage.io.ImmExtD
+  IDBarrier.io.BranchD      := IDstage.io.BranchD
+  IDBarrier.io.JumpD        := IDstage.io.JumpD
+  IDBarrier.io.PCD          := IDstage.io.pcD_out
+  IDBarrier.io.PCPlus4D     := IDstage.io.pcPlus4D_out
+  IDBarrier.io.rs1D         := IFBarrier.io.InstrD(19,15)  // rs1
+  IDBarrier.io.rs2D         := IFBarrier.io.InstrD(24,20)  // rs2
+  IDBarrier.io.CLR          := EXstage.io.PCSrcE
 
   //EX STAGE
-  EXstage.io.uop          := IDBarrier.io.outUOP
-  EXstage.io.rd_in        := IDBarrier.io.outRD
-  EXstage.io.operandA     := IDBarrier.io.outOperandA
-  EXstage.io.operandB     := IDBarrier.io.outOperandB
-  EXstage.io.XcptInvalid  := IDBarrier.io.outXcptInvalid
-  EXstage.io.wrten_in     := IDBarrier.io.outWrten
-  EXstage.io.ALUsrc       := IDBarrier.io.outALUsrc
-  EXstage.io.immExtnd     := IDBarrier.io.outImmExtnd
-  EXstage.io.j_in         := IDBarrier.io.outJ
-  EXstage.io.pc4_in       := IDBarrier.io.outPC4
-  EXstage.io.bop          := IDBarrier.io.outBop
+  EXstage.io.RD1E         := IDBarrier.io.RD1E
+  EXstage.io.RD2E         := IDBarrier.io.RD2E
+  EXstage.io.ImmExtE      := IDBarrier.io.ImmExtE
+  EXstage.io.ALUSrcE      := IDBarrier.io.ALUSrcE
+  EXstage.io.rdE          := IDBarrier.io.rdE
+  EXstage.io.uopE         := IDBarrier.io.uopE
+  EXstage.io.RegWriteE    := IDBarrier.io.RegWriteE
+  EXstage.io.XcptInvalidE := IDBarrier.io.XcptInvalidE
+  EXstage.io.PCE          := IDBarrier.io.PCE
+  EXstage.io.PCPlus4E     := IDBarrier.io.PCPlus4E
+  EXstage.io.BranchE      := IDBarrier.io.BranchE
+  EXstage.io.JumpE        := IDBarrier.io.JumpE
 
   //EX BARRIER
-  EXBarrier.io.inAluResult    := EXstage.io.aluResult
-  EXBarrier.io.inRD           := EXstage.io.rd
-  EXBarrier.io.inXcptInvalid  := EXstage.io.exception
-  EXBarrier.io.inWrten        := EXstage.io.wrten
-  EXBarrier.io.inJ            := EXstage.io.j_out
-  EXBarrier.io.inPC4          := EXstage.io.pc4_out
+  EXBarrier.io.ALUResultE   := EXstage.io.ALUResultE
+  EXBarrier.io.rdE          := EXstage.io.rdOutE
+  EXBarrier.io.XcptInvalidE := EXstage.io.exceptionE
+  EXBarrier.io.RegWriteE    := EXstage.io.RegWriteOutE
 
   //MEM STAGE (empty: connect MEM barrier straight to EX barrier outputs)
-  MEMBarrier.io.inALUResult := EXBarrier.io.outAluResult
-  MEMBarrier.io.inRD        := EXBarrier.io.outRD
-  MEMBarrier.io.inException := EXBarrier.io.outXcptInvalid
-  MEMBarrier.io.inWrten     := EXBarrier.io.outWrten
-  MEMBarrier.io.inJ         := EXBarrier.io.outJ
-  MEMBarrier.io.inPC4       := EXBarrier.io.outPC4
+  MEMBarrier.io.ALUResultM   := EXBarrier.io.ALUResultM
+  MEMBarrier.io.rdM          := EXBarrier.io.rdM
+  MEMBarrier.io.XcptInvalidM := EXBarrier.io.XcptInvalidM
+  MEMBarrier.io.RegWriteM    := EXBarrier.io.RegWriteM
 
   //WB STAGE
-  WBstage.io.aluResult := MEMBarrier.io.outALUResult
-  WBstage.io.pc4       := MEMBarrier.io.outPC4
-  WBstage.io.rd        := MEMBarrier.io.outRD
-  WBstage.io.wrten     := MEMBarrier.io.outWrten
-  WBstage.io.j         := MEMBarrier.io.outJ
+  WBstage.io.ALUResultW := MEMBarrier.io.ALUResultW
+  WBstage.io.rdW        := MEMBarrier.io.rdW
+  WBstage.io.RegWriteW  := MEMBarrier.io.RegWriteW
 
   //WB BARRIER
-  WBBarrier.io.inCheckRes     := WBstage.io.aluResult
-  WBBarrier.io.inXcptInvalid  := MEMBarrier.io.outException
+  WBBarrier.io.ResultW      := WBstage.io.ResultW
+  WBBarrier.io.XcptInvalidW := MEMBarrier.io.XcptInvalidW
 
   //FORWARDING UNIT
-  ForwardingUnit.io.rs1_EX   := IDBarrier.io.rs1_EX
-  ForwardingUnit.io.rs2_EX   := IDBarrier.io.rs2_EX
+  ForwardingUnit.io.rs1_EX   := IDBarrier.io.Rs1E
+  ForwardingUnit.io.rs2_EX   := IDBarrier.io.Rs2E
 
-  ForwardingUnit.io.rd_MEM   := EXBarrier.io.outRD
-  ForwardingUnit.io.wrEn_MEM := EXBarrier.io.outWrten
+  ForwardingUnit.io.rd_MEM   := EXBarrier.io.rdM
+  ForwardingUnit.io.wrEn_MEM := EXBarrier.io.RegWriteM
 
-  ForwardingUnit.io.rd_WB    := MEMBarrier.io.outRD
-  ForwardingUnit.io.wrEn_WB  := MEMBarrier.io.outWrten
+  ForwardingUnit.io.rd_WB    := MEMBarrier.io.rdW
+  ForwardingUnit.io.wrEn_WB  := MEMBarrier.io.RegWriteW
 
-  EXstage.io.forwardSelA := ForwardingUnit.io.forwardA
-  EXstage.io.forwardSelB := ForwardingUnit.io.forwardB
-  EXstage.io.aluResultMEM := EXBarrier.io.outAluResult   // value forwarded from MEM
-  EXstage.io.aluResultWB  := MEMBarrier.io.outALUResult  // value forwarded from WB
+  EXstage.io.ForwardAE  := ForwardingUnit.io.forwardA
+  EXstage.io.ForwardBE  := ForwardingUnit.io.forwardB
+  EXstage.io.ALUResultM := EXBarrier.io.ALUResultM   // value forwarded from MEM
+  EXstage.io.ResultW    := WBstage.io.ResultW        // value forwarded from WB
 
-  IDBarrier.io.rs1_ID := IDstage.io.inst(19,15)  // rs1
-  IDBarrier.io.rs2_ID := IDstage.io.inst(24,20)   // rs2
+  //TOP-LEVEL OUTPUTS
+  io.check_res := WBBarrier.io.check_res
+  io.exception := WBBarrier.io.exception
 
-  io.check_res := WBBarrier.io.outCheckRes
-  io.exception := WBBarrier.io.outXcptInvalid
+  //DEBUG OUTPUTS
+  io.PCdebug        := IFstage.io.PCF
+  io.InstrDdebug    := IFBarrier.io.InstrD
+  io.PCEdebug       := IDBarrier.io.PCE
+  io.RS1Edebug      := IDBarrier.io.RD1E
+  io.RS2Edebug      := IDBarrier.io.RD2E
+  io.BranchEdebug   := IDBarrier.io.BranchE
+  io.JumpEdebug     := IDBarrier.io.JumpE
+  io.PCSrcEdebug    := EXstage.io.PCSrcE
+  io.PCTargetEdebug := EXstage.io.PCTargetE
+  io.RegWriteWdebug := MEMBarrier.io.RegWriteW
+  io.rdWdebug       := MEMBarrier.io.rdW
 }

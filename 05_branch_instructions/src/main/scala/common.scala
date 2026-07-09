@@ -29,40 +29,40 @@ import chisel3.experimental.ChiselEnum
 
 object uopc extends ChiselEnum {
 
-    val ADD = Value(0.U)
-    val SUB = Value(1.U)
-    val AND = Value(2.U)
-    val OR = Value(3.U)
-    val XOR = Value(4.U)
-    val SLL = Value(5.U)
-    val SRL = Value(6.U)
-    val SRA = Value(7.U)
-    val SLT = Value(8.U)
-    val SLTU = Value(9.U)
-    val SLTI = Value(10.U)
+  val ADD = Value(0.U)
+  val SUB = Value(1.U)
+  val AND = Value(2.U)
+  val OR = Value(3.U)
+  val XOR = Value(4.U)
+  val SLL = Value(5.U)
+  val SRL = Value(6.U)
+  val SRA = Value(7.U)
+  val SLT = Value(8.U)
+  val SLTU = Value(9.U)
+  val SLTI = Value(10.U)
 
-    val ADDI = Value(11.U)
-    val XORI = Value(12.U)
-    val ORI  = Value(13.U)
-    val ANDI = Value(14.U)
+  val ADDI = Value(11.U)
+  val XORI = Value(12.U)
+  val ORI  = Value(13.U)
+  val ANDI = Value(14.U)
 
-    val SLLI = Value(15.U)
-    val SLTIU = Value(16.U)
-    val SRLI = Value(17.U)
-    val SRAI = Value(18.U)
+  val SLLI = Value(15.U)
+  val SLTIU = Value(16.U)
+  val SRLI = Value(17.U)
+  val SRAI = Value(18.U)
 
-    val NOP  = Value(19.U)
+  val NOP  = Value(19.U)
 
-    val INVALID = Value(20.U)
+  val BEQ  = Value(20.U)
+  val BNE  = Value(21.U)
+  val BLT  = Value(22.U)
+  val BGE  = Value(23.U)
+  val BLTU = Value(24.U)
+  val BGEU = Value(25.U)
+
+  val JAL  = Value(26.U)
+  val JALR = Value(27.U)
+
+  val INVALID = Value(28.U)
 }
-
-object Bop extends ChiselEnum {
-  val BEQ  = Value(0.U)
-  val BNE  = Value(1.U)
-  val BLT  = Value(4.U)
-  val BGE  = Value(5.U)
-  val BLTU = Value(6.U)
-  val BGEU = Value(7.U)
-}
-
 //ToDo: Add your implementation according to the specification above here 

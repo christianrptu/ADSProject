@@ -1,7 +1,11 @@
 module IF(
   input         clock,
   input         reset,
-  output [31:0] io_inst
+  input         io_PCSrcE,
+  input  [31:0] io_PCTargetE,
+  output [31:0] io_InstrF,
+  output [31:0] io_PCF,
+  output [31:0] io_PCPlus4F
 );
 `ifdef RANDOMIZE_MEM_INIT
   reg [31:0] _RAND_0;
@@ -9,22 +13,26 @@ module IF(
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_1;
 `endif // RANDOMIZE_REG_INIT
-  reg [31:0] IMem [0:4095]; // @[IFstage.scala 56:17]
-  wire  IMem_io_inst_MPORT_en; // @[IFstage.scala 56:17]
-  wire [11:0] IMem_io_inst_MPORT_addr; // @[IFstage.scala 56:17]
-  wire [31:0] IMem_io_inst_MPORT_data; // @[IFstage.scala 56:17]
-  reg [31:0] PC; // @[IFstage.scala 60:21]
-  wire [29:0] addr = PC[31:2]; // @[IFstage.scala 61:17]
-  wire [31:0] pcP4 = PC + 32'h4; // @[IFstage.scala 63:17]
-  assign IMem_io_inst_MPORT_en = 1'h1;
-  assign IMem_io_inst_MPORT_addr = addr[11:0];
-  assign IMem_io_inst_MPORT_data = IMem[IMem_io_inst_MPORT_addr]; // @[IFstage.scala 56:17]
-  assign io_inst = IMem_io_inst_MPORT_data; // @[IFstage.scala 77:11]
+  reg [31:0] IMem [0:4095]; // @[IFstage.scala 54:17]
+  wire  IMem_io_InstrF_MPORT_en; // @[IFstage.scala 54:17]
+  wire [11:0] IMem_io_InstrF_MPORT_addr; // @[IFstage.scala 54:17]
+  wire [31:0] IMem_io_InstrF_MPORT_data; // @[IFstage.scala 54:17]
+  reg [31:0] PC; // @[IFstage.scala 57:19]
+  wire [29:0] addr = PC[31:2]; // @[IFstage.scala 59:17]
+  wire [31:0] PCPlus4 = PC + 32'h4; // @[IFstage.scala 63:20]
+  assign IMem_io_InstrF_MPORT_en = 1'h1;
+  assign IMem_io_InstrF_MPORT_addr = addr[11:0];
+  assign IMem_io_InstrF_MPORT_data = IMem[IMem_io_InstrF_MPORT_addr]; // @[IFstage.scala 54:17]
+  assign io_InstrF = IMem_io_InstrF_MPORT_data; // @[IFstage.scala 61:13]
+  assign io_PCF = PC; // @[IFstage.scala 68:15]
+  assign io_PCPlus4F = PC + 32'h4; // @[IFstage.scala 63:20]
   always @(posedge clock) begin
-    if (reset) begin // @[IFstage.scala 60:21]
-      PC <= 32'h0; // @[IFstage.scala 60:21]
+    if (reset) begin // @[IFstage.scala 57:19]
+      PC <= 32'h0; // @[IFstage.scala 57:19]
+    end else if (io_PCSrcE) begin // @[IFstage.scala 64:20]
+      PC <= io_PCTargetE;
     end else begin
-      PC <= pcP4; // @[IFstage.scala 74:6]
+      PC <= PCPlus4;
     end
   end
 // Register and memory initialization
@@ -81,22 +89,46 @@ endmodule
 module IFBarrier(
   input         clock,
   input         reset,
-  input         io_flush,
-  input  [31:0] io_inInstr,
-  output [31:0] io_outInstr
+  input  [31:0] io_InstrF,
+  input  [31:0] io_PCF,
+  input  [31:0] io_PCPlus4F,
+  input         io_CLR,
+  output [31:0] io_InstrD,
+  output [31:0] io_PCD,
+  output [31:0] io_PCPlus4D
 );
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
 `endif // RANDOMIZE_REG_INIT
-  reg [31:0] instrReg; // @[IFbarrier.scala 41:25]
-  assign io_outInstr = instrReg; // @[IFbarrier.scala 52:17]
+  reg [31:0] instrReg; // @[IFbarrier.scala 44:27]
+  reg [31:0] pcReg; // @[IFbarrier.scala 45:27]
+  reg [31:0] pcPlus4Reg; // @[IFbarrier.scala 46:27]
+  assign io_InstrD = instrReg; // @[IFbarrier.scala 58:15]
+  assign io_PCD = pcReg; // @[IFbarrier.scala 59:15]
+  assign io_PCPlus4D = pcPlus4Reg; // @[IFbarrier.scala 60:15]
   always @(posedge clock) begin
-    if (reset) begin // @[IFbarrier.scala 41:25]
-      instrReg <= 32'h0; // @[IFbarrier.scala 41:25]
-    end else if (~io_flush) begin // @[IFbarrier.scala 44:30]
-      instrReg <= io_inInstr; // @[IFbarrier.scala 45:17]
+    if (reset) begin // @[IFbarrier.scala 44:27]
+      instrReg <= 32'h0; // @[IFbarrier.scala 44:27]
+    end else if (io_CLR) begin // @[IFbarrier.scala 48:16]
+      instrReg <= 32'h0; // @[IFbarrier.scala 49:16]
     end else begin
-      instrReg <= 32'h0; // @[IFbarrier.scala 48:17]
+      instrReg <= io_InstrF; // @[IFbarrier.scala 53:16]
+    end
+    if (reset) begin // @[IFbarrier.scala 45:27]
+      pcReg <= 32'h0; // @[IFbarrier.scala 45:27]
+    end else if (io_CLR) begin // @[IFbarrier.scala 48:16]
+      pcReg <= 32'h0; // @[IFbarrier.scala 50:16]
+    end else begin
+      pcReg <= io_PCF; // @[IFbarrier.scala 54:16]
+    end
+    if (reset) begin // @[IFbarrier.scala 46:27]
+      pcPlus4Reg <= 32'h0; // @[IFbarrier.scala 46:27]
+    end else if (io_CLR) begin // @[IFbarrier.scala 48:16]
+      pcPlus4Reg <= 32'h0; // @[IFbarrier.scala 51:16]
+    end else begin
+      pcPlus4Reg <= io_PCPlus4F; // @[IFbarrier.scala 55:16]
     end
   end
 // Register and memory initialization
@@ -137,6 +169,10 @@ initial begin
 `ifdef RANDOMIZE_REG_INIT
   _RAND_0 = {1{`RANDOM}};
   instrReg = _RAND_0[31:0];
+  _RAND_1 = {1{`RANDOM}};
+  pcReg = _RAND_1[31:0];
+  _RAND_2 = {1{`RANDOM}};
+  pcPlus4Reg = _RAND_2[31:0];
 `endif // RANDOMIZE_REG_INIT
   `endif // RANDOMIZE
 end // initial
@@ -624,104 +660,114 @@ module ControlUnit(
   input  [6:0] io_opcode,
   input  [2:0] io_funct3,
   input  [6:0] io_funct7,
-  input        io_taken,
   output [4:0] io_uop,
-  output [2:0] io_bop,
-  output       io_ALUsrc,
+  output       io_ALUSrcD,
   output [1:0] io_immSel,
-  output       io_flush,
+  output       io_BranchD,
+  output       io_JumpD,
+  output       io_RegWriteD,
   output       io_XcptInvalid
 );
-  wire  _T_1 = io_funct7 == 7'h0; // @[IDstage.scala 82:28]
-  wire  _T_2 = 3'h0 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_3 = 3'h1 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_4 = 3'h2 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_5 = 3'h3 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_6 = 3'h4 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_7 = 3'h5 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_8 = 3'h6 == io_funct3; // @[IDstage.scala 83:34]
-  wire  _T_9 = 3'h7 == io_funct3; // @[IDstage.scala 83:34]
-  wire [4:0] _GEN_0 = 3'h7 == io_funct3 ? 5'h2 : 5'h14; // @[IDstage.scala 72:20 83:34 91:42]
-  wire  _GEN_1 = 3'h7 == io_funct3 ? 1'h0 : 1'h1; // @[IDstage.scala 78:20 83:34 91:71]
-  wire [4:0] _GEN_2 = 3'h6 == io_funct3 ? 5'h3 : _GEN_0; // @[IDstage.scala 83:34 90:42]
-  wire  _GEN_3 = 3'h6 == io_funct3 ? 1'h0 : _GEN_1; // @[IDstage.scala 83:34 90:71]
-  wire [4:0] _GEN_4 = 3'h5 == io_funct3 ? 5'h6 : _GEN_2; // @[IDstage.scala 83:34 89:42]
-  wire  _GEN_5 = 3'h5 == io_funct3 ? 1'h0 : _GEN_3; // @[IDstage.scala 83:34 89:71]
-  wire [4:0] _GEN_6 = 3'h4 == io_funct3 ? 5'h4 : _GEN_4; // @[IDstage.scala 83:34 88:42]
-  wire  _GEN_7 = 3'h4 == io_funct3 ? 1'h0 : _GEN_5; // @[IDstage.scala 83:34 88:71]
-  wire [4:0] _GEN_8 = 3'h3 == io_funct3 ? 5'h9 : _GEN_6; // @[IDstage.scala 83:34 87:42]
-  wire  _GEN_9 = 3'h3 == io_funct3 ? 1'h0 : _GEN_7; // @[IDstage.scala 83:34 87:71]
-  wire [4:0] _GEN_10 = 3'h2 == io_funct3 ? 5'h8 : _GEN_8; // @[IDstage.scala 83:34 86:42]
-  wire  _GEN_11 = 3'h2 == io_funct3 ? 1'h0 : _GEN_9; // @[IDstage.scala 83:34 86:71]
-  wire [4:0] _GEN_12 = 3'h1 == io_funct3 ? 5'h5 : _GEN_10; // @[IDstage.scala 83:34 85:42]
-  wire  _GEN_13 = 3'h1 == io_funct3 ? 1'h0 : _GEN_11; // @[IDstage.scala 83:34 85:71]
-  wire [4:0] _GEN_14 = 3'h0 == io_funct3 ? 5'h0 : _GEN_12; // @[IDstage.scala 83:34 84:42]
-  wire  _GEN_15 = 3'h0 == io_funct3 ? 1'h0 : _GEN_13; // @[IDstage.scala 83:34 84:71]
-  wire  _T_10 = io_funct7 == 7'h20; // @[IDstage.scala 93:34]
-  wire [4:0] _GEN_16 = _T_7 ? 5'h7 : 5'h14; // @[IDstage.scala 72:20 94:34 96:42]
-  wire  _GEN_17 = _T_7 ? 1'h0 : 1'h1; // @[IDstage.scala 78:20 94:34 96:70]
-  wire [4:0] _GEN_18 = _T_2 ? 5'h1 : _GEN_16; // @[IDstage.scala 94:34 95:42]
-  wire  _GEN_19 = _T_2 ? 1'h0 : _GEN_17; // @[IDstage.scala 94:34 95:70]
-  wire [4:0] _GEN_20 = io_funct7 == 7'h20 ? _GEN_18 : 5'h14; // @[IDstage.scala 72:20 93:51]
-  wire  _GEN_21 = io_funct7 == 7'h20 ? _GEN_19 : 1'h1; // @[IDstage.scala 78:20 93:51]
-  wire [4:0] _GEN_22 = io_funct7 == 7'h0 ? _GEN_14 : _GEN_20; // @[IDstage.scala 82:45]
-  wire  _GEN_23 = io_funct7 == 7'h0 ? _GEN_15 : _GEN_21; // @[IDstage.scala 82:45]
-  wire [4:0] _GEN_24 = _T_1 ? 5'hf : 5'h14; // @[IDstage.scala 110:53 111:32 72:20]
-  wire  _GEN_26 = _T_1 ? 1'h0 : 1'h1; // @[IDstage.scala 110:53 111:79 78:20]
-  wire [4:0] _GEN_27 = _T_10 ? 5'h12 : 5'h14; // @[IDstage.scala 117:59 118:32 72:20]
-  wire  _GEN_29 = _T_10 ? 1'h0 : 1'h1; // @[IDstage.scala 117:59 118:79 78:20]
-  wire [4:0] _GEN_30 = _T_1 ? 5'h11 : _GEN_27; // @[IDstage.scala 115:53 116:32]
-  wire  _GEN_31 = _T_1 | _T_10; // @[IDstage.scala 115:53 116:56]
-  wire  _GEN_32 = _T_1 ? 1'h0 : _GEN_29; // @[IDstage.scala 115:53 116:79]
-  wire [4:0] _GEN_33 = _T_7 ? _GEN_30 : 5'h14; // @[IDstage.scala 102:30 72:20]
-  wire  _GEN_34 = _T_7 & _GEN_31; // @[IDstage.scala 102:30 75:20]
-  wire  _GEN_35 = _T_7 ? _GEN_32 : 1'h1; // @[IDstage.scala 102:30 78:20]
-  wire [4:0] _GEN_36 = _T_3 ? _GEN_24 : _GEN_33; // @[IDstage.scala 102:30]
-  wire  _GEN_37 = _T_3 ? _T_1 : _GEN_34; // @[IDstage.scala 102:30]
-  wire  _GEN_38 = _T_3 ? _GEN_26 : _GEN_35; // @[IDstage.scala 102:30]
-  wire [4:0] _GEN_39 = _T_9 ? 5'he : _GEN_36; // @[IDstage.scala 102:30 108:38]
-  wire  _GEN_40 = _T_9 ? 1'h0 : _GEN_38; // @[IDstage.scala 102:30 108:68]
-  wire  _GEN_41 = _T_9 ? 1'h0 : _GEN_37; // @[IDstage.scala 102:30 75:20]
-  wire [4:0] _GEN_42 = _T_8 ? 5'hd : _GEN_39; // @[IDstage.scala 102:30 107:38]
-  wire  _GEN_43 = _T_8 ? 1'h0 : _GEN_40; // @[IDstage.scala 102:30 107:68]
-  wire  _GEN_44 = _T_8 ? 1'h0 : _GEN_41; // @[IDstage.scala 102:30 75:20]
-  wire [4:0] _GEN_45 = _T_6 ? 5'hc : _GEN_42; // @[IDstage.scala 102:30 106:38]
-  wire  _GEN_46 = _T_6 ? 1'h0 : _GEN_43; // @[IDstage.scala 102:30 106:68]
-  wire  _GEN_47 = _T_6 ? 1'h0 : _GEN_44; // @[IDstage.scala 102:30 75:20]
-  wire [4:0] _GEN_48 = _T_5 ? 5'h10 : _GEN_45; // @[IDstage.scala 102:30 105:38]
-  wire  _GEN_49 = _T_5 ? 1'h0 : _GEN_46; // @[IDstage.scala 102:30 105:68]
-  wire  _GEN_50 = _T_5 ? 1'h0 : _GEN_47; // @[IDstage.scala 102:30 75:20]
-  wire [4:0] _GEN_51 = _T_4 ? 5'ha : _GEN_48; // @[IDstage.scala 102:30 104:38]
-  wire  _GEN_52 = _T_4 ? 1'h0 : _GEN_49; // @[IDstage.scala 102:30 104:68]
-  wire  _GEN_53 = _T_4 ? 1'h0 : _GEN_50; // @[IDstage.scala 102:30 75:20]
-  wire [4:0] _GEN_54 = _T_2 ? 5'hb : _GEN_51; // @[IDstage.scala 102:30 103:38]
-  wire  _GEN_55 = _T_2 ? 1'h0 : _GEN_52; // @[IDstage.scala 102:30 103:68]
-  wire  _GEN_56 = _T_2 ? 1'h0 : _GEN_53; // @[IDstage.scala 102:30 75:20]
-  wire [2:0] _GEN_57 = _T_9 ? 3'h7 : 3'h0; // @[IDstage.scala 125:30 131:38 73:20]
-  wire [2:0] _GEN_59 = _T_8 ? 3'h6 : _GEN_57; // @[IDstage.scala 125:30 130:38]
-  wire [2:0] _GEN_61 = _T_7 ? 3'h5 : _GEN_59; // @[IDstage.scala 125:30 129:38]
-  wire [2:0] _GEN_63 = _T_6 ? 3'h4 : _GEN_61; // @[IDstage.scala 125:30 128:38]
-  wire [2:0] _GEN_65 = _T_3 ? 3'h1 : _GEN_63; // @[IDstage.scala 125:30 127:38]
-  wire  _GEN_66 = _T_3 ? 1'h0 : _GEN_7; // @[IDstage.scala 125:30 127:66]
-  wire [2:0] _GEN_67 = _T_2 ? 3'h0 : _GEN_65; // @[IDstage.scala 125:30 126:38]
-  wire  _GEN_68 = _T_2 ? 1'h0 : _GEN_66; // @[IDstage.scala 125:30 126:66]
-  wire  _GEN_70 = 7'h67 == io_opcode ? 1'h0 : 1'h1; // @[IDstage.scala 80:22 146:28 78:20]
-  wire [1:0] _GEN_72 = 7'h6f == io_opcode ? 2'h2 : 2'h0; // @[IDstage.scala 80:22 139:23 75:20]
-  wire  _GEN_73 = 7'h6f == io_opcode ? 1'h0 : _GEN_70; // @[IDstage.scala 80:22 140:28]
-  wire [1:0] _GEN_75 = 7'h63 == io_opcode ? 2'h3 : _GEN_72; // @[IDstage.scala 80:22 124:23]
-  wire [2:0] _GEN_76 = 7'h63 == io_opcode ? _GEN_67 : 3'h0; // @[IDstage.scala 73:20 80:22]
-  wire  _GEN_77 = 7'h63 == io_opcode ? _GEN_68 : _GEN_73; // @[IDstage.scala 80:22]
-  wire [4:0] _GEN_81 = 7'h13 == io_opcode ? _GEN_54 : 5'h14; // @[IDstage.scala 72:20 80:22]
-  wire  _GEN_82 = 7'h13 == io_opcode ? _GEN_55 : _GEN_77; // @[IDstage.scala 80:22]
-  wire [1:0] _GEN_83 = 7'h13 == io_opcode ? {{1'd0}, _GEN_56} : _GEN_75; // @[IDstage.scala 80:22]
-  wire [2:0] _GEN_84 = 7'h13 == io_opcode ? 3'h0 : _GEN_76; // @[IDstage.scala 73:20 80:22]
-  wire  _GEN_85 = 7'h13 == io_opcode ? 1'h0 : 7'h63 == io_opcode & io_taken; // @[IDstage.scala 76:20 80:22]
-  assign io_uop = 7'h33 == io_opcode ? _GEN_22 : _GEN_81; // @[IDstage.scala 80:22]
-  assign io_bop = 7'h33 == io_opcode ? 3'h0 : _GEN_84; // @[IDstage.scala 73:20 80:22]
-  assign io_ALUsrc = 7'h33 == io_opcode ? 1'h0 : 7'h13 == io_opcode; // @[IDstage.scala 74:20 80:22]
-  assign io_immSel = 7'h33 == io_opcode ? 2'h0 : _GEN_83; // @[IDstage.scala 75:20 80:22]
-  assign io_flush = 7'h33 == io_opcode ? 1'h0 : _GEN_85; // @[IDstage.scala 76:20 80:22]
-  assign io_XcptInvalid = 7'h33 == io_opcode ? _GEN_23 : _GEN_82; // @[IDstage.scala 80:22]
+  wire  _T_1 = io_funct7 == 7'h0; // @[IDstage.scala 80:28]
+  wire  _T_2 = 3'h0 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_3 = 3'h1 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_4 = 3'h2 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_5 = 3'h3 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_6 = 3'h4 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_7 = 3'h5 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_8 = 3'h6 == io_funct3; // @[IDstage.scala 81:34]
+  wire  _T_9 = 3'h7 == io_funct3; // @[IDstage.scala 81:34]
+  wire [4:0] _GEN_0 = 3'h7 == io_funct3 ? 5'h2 : 5'h1c; // @[IDstage.scala 69:20 81:34 89:42]
+  wire  _GEN_1 = 3'h7 == io_funct3 ? 1'h0 : 1'h1; // @[IDstage.scala 75:20 81:34 89:71]
+  wire [4:0] _GEN_2 = 3'h6 == io_funct3 ? 5'h3 : _GEN_0; // @[IDstage.scala 81:34 88:42]
+  wire  _GEN_3 = 3'h6 == io_funct3 ? 1'h0 : _GEN_1; // @[IDstage.scala 81:34 88:71]
+  wire [4:0] _GEN_4 = 3'h5 == io_funct3 ? 5'h6 : _GEN_2; // @[IDstage.scala 81:34 87:42]
+  wire  _GEN_5 = 3'h5 == io_funct3 ? 1'h0 : _GEN_3; // @[IDstage.scala 81:34 87:71]
+  wire [4:0] _GEN_6 = 3'h4 == io_funct3 ? 5'h4 : _GEN_4; // @[IDstage.scala 81:34 86:42]
+  wire  _GEN_7 = 3'h4 == io_funct3 ? 1'h0 : _GEN_5; // @[IDstage.scala 81:34 86:71]
+  wire [4:0] _GEN_8 = 3'h3 == io_funct3 ? 5'h9 : _GEN_6; // @[IDstage.scala 81:34 85:42]
+  wire  _GEN_9 = 3'h3 == io_funct3 ? 1'h0 : _GEN_7; // @[IDstage.scala 81:34 85:71]
+  wire [4:0] _GEN_10 = 3'h2 == io_funct3 ? 5'h8 : _GEN_8; // @[IDstage.scala 81:34 84:42]
+  wire  _GEN_11 = 3'h2 == io_funct3 ? 1'h0 : _GEN_9; // @[IDstage.scala 81:34 84:71]
+  wire [4:0] _GEN_12 = 3'h1 == io_funct3 ? 5'h5 : _GEN_10; // @[IDstage.scala 81:34 83:42]
+  wire  _GEN_13 = 3'h1 == io_funct3 ? 1'h0 : _GEN_11; // @[IDstage.scala 81:34 83:71]
+  wire [4:0] _GEN_14 = 3'h0 == io_funct3 ? 5'h0 : _GEN_12; // @[IDstage.scala 81:34 82:42]
+  wire  _GEN_15 = 3'h0 == io_funct3 ? 1'h0 : _GEN_13; // @[IDstage.scala 81:34 82:71]
+  wire  _T_10 = io_funct7 == 7'h20; // @[IDstage.scala 91:34]
+  wire [4:0] _GEN_16 = _T_7 ? 5'h7 : 5'h1c; // @[IDstage.scala 69:20 92:34 94:42]
+  wire  _GEN_17 = _T_7 ? 1'h0 : 1'h1; // @[IDstage.scala 75:20 92:34 94:70]
+  wire [4:0] _GEN_18 = _T_2 ? 5'h1 : _GEN_16; // @[IDstage.scala 92:34 93:42]
+  wire  _GEN_19 = _T_2 ? 1'h0 : _GEN_17; // @[IDstage.scala 92:34 93:70]
+  wire [4:0] _GEN_20 = io_funct7 == 7'h20 ? _GEN_18 : 5'h1c; // @[IDstage.scala 69:20 91:51]
+  wire  _GEN_21 = io_funct7 == 7'h20 ? _GEN_19 : 1'h1; // @[IDstage.scala 75:20 91:51]
+  wire [4:0] _GEN_22 = io_funct7 == 7'h0 ? _GEN_14 : _GEN_20; // @[IDstage.scala 80:45]
+  wire  _GEN_23 = io_funct7 == 7'h0 ? _GEN_15 : _GEN_21; // @[IDstage.scala 80:45]
+  wire [4:0] _GEN_24 = _T_1 ? 5'hf : 5'h1c; // @[IDstage.scala 109:53 110:32 69:20]
+  wire  _GEN_26 = _T_1 ? 1'h0 : 1'h1; // @[IDstage.scala 109:53 110:79 75:20]
+  wire [4:0] _GEN_27 = _T_10 ? 5'h12 : 5'h1c; // @[IDstage.scala 116:59 117:32 69:20]
+  wire  _GEN_29 = _T_10 ? 1'h0 : 1'h1; // @[IDstage.scala 116:59 117:79 75:20]
+  wire [4:0] _GEN_30 = _T_1 ? 5'h11 : _GEN_27; // @[IDstage.scala 114:53 115:32]
+  wire  _GEN_31 = _T_1 | _T_10; // @[IDstage.scala 114:53 115:56]
+  wire  _GEN_32 = _T_1 ? 1'h0 : _GEN_29; // @[IDstage.scala 114:53 115:79]
+  wire [4:0] _GEN_33 = _T_7 ? _GEN_30 : 5'h1c; // @[IDstage.scala 101:30 69:20]
+  wire  _GEN_34 = _T_7 & _GEN_31; // @[IDstage.scala 101:30 71:20]
+  wire  _GEN_35 = _T_7 ? _GEN_32 : 1'h1; // @[IDstage.scala 101:30 75:20]
+  wire [4:0] _GEN_36 = _T_3 ? _GEN_24 : _GEN_33; // @[IDstage.scala 101:30]
+  wire  _GEN_37 = _T_3 ? _T_1 : _GEN_34; // @[IDstage.scala 101:30]
+  wire  _GEN_38 = _T_3 ? _GEN_26 : _GEN_35; // @[IDstage.scala 101:30]
+  wire [4:0] _GEN_39 = _T_9 ? 5'he : _GEN_36; // @[IDstage.scala 101:30 107:38]
+  wire  _GEN_40 = _T_9 ? 1'h0 : _GEN_38; // @[IDstage.scala 101:30 107:68]
+  wire  _GEN_41 = _T_9 ? 1'h0 : _GEN_37; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_42 = _T_8 ? 5'hd : _GEN_39; // @[IDstage.scala 101:30 106:38]
+  wire  _GEN_43 = _T_8 ? 1'h0 : _GEN_40; // @[IDstage.scala 101:30 106:68]
+  wire  _GEN_44 = _T_8 ? 1'h0 : _GEN_41; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_45 = _T_6 ? 5'hc : _GEN_42; // @[IDstage.scala 101:30 105:38]
+  wire  _GEN_46 = _T_6 ? 1'h0 : _GEN_43; // @[IDstage.scala 101:30 105:68]
+  wire  _GEN_47 = _T_6 ? 1'h0 : _GEN_44; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_48 = _T_5 ? 5'h10 : _GEN_45; // @[IDstage.scala 101:30 104:38]
+  wire  _GEN_49 = _T_5 ? 1'h0 : _GEN_46; // @[IDstage.scala 101:30 104:68]
+  wire  _GEN_50 = _T_5 ? 1'h0 : _GEN_47; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_51 = _T_4 ? 5'ha : _GEN_48; // @[IDstage.scala 101:30 103:38]
+  wire  _GEN_52 = _T_4 ? 1'h0 : _GEN_49; // @[IDstage.scala 101:30 103:68]
+  wire  _GEN_53 = _T_4 ? 1'h0 : _GEN_50; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_54 = _T_2 ? 5'hb : _GEN_51; // @[IDstage.scala 101:30 102:38]
+  wire  _GEN_55 = _T_2 ? 1'h0 : _GEN_52; // @[IDstage.scala 101:30 102:68]
+  wire  _GEN_56 = _T_2 ? 1'h0 : _GEN_53; // @[IDstage.scala 101:30 71:20]
+  wire [4:0] _GEN_57 = _T_9 ? 5'h19 : 5'h1c; // @[IDstage.scala 126:30 132:38 69:20]
+  wire [4:0] _GEN_59 = _T_8 ? 5'h18 : _GEN_57; // @[IDstage.scala 126:30 131:38]
+  wire [4:0] _GEN_61 = _T_7 ? 5'h17 : _GEN_59; // @[IDstage.scala 126:30 130:38]
+  wire [4:0] _GEN_63 = _T_6 ? 5'h16 : _GEN_61; // @[IDstage.scala 126:30 129:38]
+  wire [4:0] _GEN_65 = _T_3 ? 5'h15 : _GEN_63; // @[IDstage.scala 126:30 128:38]
+  wire  _GEN_66 = _T_3 ? 1'h0 : _GEN_7; // @[IDstage.scala 126:30 128:67]
+  wire [4:0] _GEN_67 = _T_2 ? 5'h14 : _GEN_65; // @[IDstage.scala 126:30 127:38]
+  wire  _GEN_68 = _T_2 ? 1'h0 : _GEN_66; // @[IDstage.scala 126:30 127:67]
+  wire [4:0] _GEN_70 = 7'h67 == io_opcode ? 5'h1b : 5'h1c; // @[IDstage.scala 77:22 148:28 69:20]
+  wire  _GEN_71 = 7'h67 == io_opcode ? 1'h0 : 1'h1; // @[IDstage.scala 77:22 149:28 75:20]
+  wire [1:0] _GEN_72 = 7'h6f == io_opcode ? 2'h2 : 2'h0; // @[IDstage.scala 77:22 136:28 71:20]
+  wire  _GEN_73 = 7'h6f == io_opcode | 7'h67 == io_opcode; // @[IDstage.scala 77:22 137:28]
+  wire [4:0] _GEN_74 = 7'h6f == io_opcode ? 5'h1a : _GEN_70; // @[IDstage.scala 77:22 139:28]
+  wire  _GEN_75 = 7'h6f == io_opcode ? 1'h0 : _GEN_71; // @[IDstage.scala 77:22 140:28]
+  wire  _GEN_76 = 7'h6f == io_opcode ? 1'h0 : 7'h67 == io_opcode; // @[IDstage.scala 70:20 77:22]
+  wire [1:0] _GEN_77 = 7'h63 == io_opcode ? 2'h3 : _GEN_72; // @[IDstage.scala 77:22 123:24]
+  wire  _GEN_78 = 7'h63 == io_opcode | _GEN_76; // @[IDstage.scala 77:22 124:24]
+  wire [4:0] _GEN_79 = 7'h63 == io_opcode ? _GEN_67 : _GEN_74; // @[IDstage.scala 77:22]
+  wire  _GEN_80 = 7'h63 == io_opcode ? _GEN_68 : _GEN_75; // @[IDstage.scala 77:22]
+  wire  _GEN_81 = 7'h63 == io_opcode ? 1'h0 : _GEN_73; // @[IDstage.scala 73:20 77:22]
+  wire  _GEN_82 = 7'h63 == io_opcode ? 1'h0 : _GEN_76; // @[IDstage.scala 70:20 77:22]
+  wire  _GEN_83 = 7'h13 == io_opcode | _GEN_82; // @[IDstage.scala 77:22 99:26]
+  wire  _GEN_84 = 7'h13 == io_opcode | _GEN_81; // @[IDstage.scala 77:22 100:26]
+  wire [4:0] _GEN_85 = 7'h13 == io_opcode ? _GEN_54 : _GEN_79; // @[IDstage.scala 77:22]
+  wire  _GEN_86 = 7'h13 == io_opcode ? _GEN_55 : _GEN_80; // @[IDstage.scala 77:22]
+  wire [1:0] _GEN_87 = 7'h13 == io_opcode ? {{1'd0}, _GEN_56} : _GEN_77; // @[IDstage.scala 77:22]
+  wire  _GEN_88 = 7'h13 == io_opcode ? 1'h0 : _GEN_78; // @[IDstage.scala 72:20 77:22]
+  wire  _GEN_89 = 7'h13 == io_opcode ? 1'h0 : _GEN_81; // @[IDstage.scala 73:20 77:22]
+  assign io_uop = 7'h33 == io_opcode ? _GEN_22 : _GEN_85; // @[IDstage.scala 77:22]
+  assign io_ALUSrcD = 7'h33 == io_opcode ? 1'h0 : _GEN_83; // @[IDstage.scala 70:20 77:22]
+  assign io_immSel = 7'h33 == io_opcode ? 2'h0 : _GEN_87; // @[IDstage.scala 71:20 77:22]
+  assign io_BranchD = 7'h33 == io_opcode ? 1'h0 : _GEN_88; // @[IDstage.scala 72:20 77:22]
+  assign io_JumpD = 7'h33 == io_opcode ? 1'h0 : _GEN_89; // @[IDstage.scala 73:20 77:22]
+  assign io_RegWriteD = 7'h33 == io_opcode | _GEN_84; // @[IDstage.scala 77:22 79:26]
+  assign io_XcptInvalid = 7'h33 == io_opcode ? _GEN_23 : _GEN_86; // @[IDstage.scala 77:22]
 endmodule
 module SignExtend(
   input  [24:0] io_imm_in,
@@ -736,67 +782,56 @@ module SignExtend(
   wire [31:0] jump_imm = {_jump_imm_T_2,io_imm_in[24],io_imm_in[12:5],io_imm_in[13],io_imm_in[23:14],1'h0}; // @[Cat.scala 31:58]
   wire [18:0] _branch_imm_T_2 = io_imm_in[24] ? 19'h7ffff : 19'h0; // @[Bitwise.scala 74:12]
   wire [31:0] branch_imm = {_branch_imm_T_2,io_imm_in[24],io_imm_in[0],io_imm_in[23:18],io_imm_in[4:1],1'h0}; // @[Cat.scala 31:58]
-  wire [31:0] _GEN_0 = 2'h3 == io_sel ? branch_imm : full; // @[IDstage.scala 189:16 190:19 201:24]
-  wire [31:0] _GEN_1 = 2'h2 == io_sel ? jump_imm : _GEN_0; // @[IDstage.scala 190:19 198:24]
-  wire [31:0] _GEN_2 = 2'h1 == io_sel ? shamt : _GEN_1; // @[IDstage.scala 190:19 195:24]
-  assign io_imm_out = 2'h0 == io_sel ? full : _GEN_2; // @[IDstage.scala 190:19 192:24]
-endmodule
-module Comparator(
-  input  [31:0] io_a,
-  input  [31:0] io_b,
-  input  [2:0]  io_sel,
-  output        io_taken
-);
-  wire  _GEN_0 = 3'h7 == io_sel & io_a >= io_b; // @[IDstage.scala 214:14 216:20 222:33]
-  wire  _GEN_1 = 3'h6 == io_sel ? io_a < io_b : _GEN_0; // @[IDstage.scala 216:20 221:33]
-  wire  _GEN_2 = 3'h5 == io_sel ? $signed(io_a) >= $signed(io_b) : _GEN_1; // @[IDstage.scala 216:20 220:33]
-  wire  _GEN_3 = 3'h4 == io_sel ? $signed(io_a) < $signed(io_b) : _GEN_2; // @[IDstage.scala 216:20 219:33]
-  wire  _GEN_4 = 3'h1 == io_sel ? io_a != io_b : _GEN_3; // @[IDstage.scala 216:20 218:33]
-  assign io_taken = 3'h0 == io_sel ? io_a == io_b : _GEN_4; // @[IDstage.scala 216:20 217:33]
+  wire [31:0] _GEN_0 = 2'h3 == io_sel ? branch_imm : full; // @[IDstage.scala 167:16 169:19 173:28]
+  wire [31:0] _GEN_1 = 2'h2 == io_sel ? jump_imm : _GEN_0; // @[IDstage.scala 169:19 172:28]
+  wire [31:0] _GEN_2 = 2'h1 == io_sel ? shamt : _GEN_1; // @[IDstage.scala 169:19 171:28]
+  assign io_imm_out = 2'h0 == io_sel ? full : _GEN_2; // @[IDstage.scala 169:19 170:28]
 endmodule
 module ID(
   input         clock,
   input         reset,
   input  [31:0] io_inst,
-  input         io_w_en,
-  input  [4:0]  io_rd_in,
-  input  [31:0] io_write_data,
+  input  [31:0] io_pcD,
+  input  [31:0] io_pcPlus4D,
+  input         io_RegWriteW,
+  input  [4:0]  io_rdW,
+  input  [31:0] io_ResultW,
   output [4:0]  io_uop,
-  output        io_ALUsrc,
-  output [31:0] io_immExtnd,
+  output        io_RegWriteD,
+  output        io_ALUSrcD,
+  output [31:0] io_ImmExtD,
+  output        io_BranchD,
+  output        io_JumpD,
   output        io_XcptInvalid,
-  output        io_flush,
-  output [4:0]  io_rd_out,
-  output [31:0] io_operandA,
-  output [31:0] io_operandB
+  output [4:0]  io_rdD,
+  output [31:0] io_RD1D,
+  output [31:0] io_RD2D,
+  output [31:0] io_pcD_out,
+  output [31:0] io_pcPlus4D_out
 );
-  wire  rf_clock; // @[IDstage.scala 259:23]
-  wire  rf_reset; // @[IDstage.scala 259:23]
-  wire [4:0] rf_io_req_1_addr; // @[IDstage.scala 259:23]
-  wire [4:0] rf_io_req_2_addr; // @[IDstage.scala 259:23]
-  wire [4:0] rf_io_req_3_addr; // @[IDstage.scala 259:23]
-  wire [31:0] rf_io_req_3_data; // @[IDstage.scala 259:23]
-  wire  rf_io_req_3_w_en; // @[IDstage.scala 259:23]
-  wire [31:0] rf_io_resp_1_data; // @[IDstage.scala 259:23]
-  wire [31:0] rf_io_resp_2_data; // @[IDstage.scala 259:23]
-  wire [6:0] cu_io_opcode; // @[IDstage.scala 260:23]
-  wire [2:0] cu_io_funct3; // @[IDstage.scala 260:23]
-  wire [6:0] cu_io_funct7; // @[IDstage.scala 260:23]
-  wire  cu_io_taken; // @[IDstage.scala 260:23]
-  wire [4:0] cu_io_uop; // @[IDstage.scala 260:23]
-  wire [2:0] cu_io_bop; // @[IDstage.scala 260:23]
-  wire  cu_io_ALUsrc; // @[IDstage.scala 260:23]
-  wire [1:0] cu_io_immSel; // @[IDstage.scala 260:23]
-  wire  cu_io_flush; // @[IDstage.scala 260:23]
-  wire  cu_io_XcptInvalid; // @[IDstage.scala 260:23]
-  wire [24:0] sigex_io_imm_in; // @[IDstage.scala 261:23]
-  wire [1:0] sigex_io_sel; // @[IDstage.scala 261:23]
-  wire [31:0] sigex_io_imm_out; // @[IDstage.scala 261:23]
-  wire [31:0] compr_io_a; // @[IDstage.scala 262:23]
-  wire [31:0] compr_io_b; // @[IDstage.scala 262:23]
-  wire [2:0] compr_io_sel; // @[IDstage.scala 262:23]
-  wire  compr_io_taken; // @[IDstage.scala 262:23]
-  regFile rf ( // @[IDstage.scala 259:23]
+  wire  rf_clock; // @[IDstage.scala 208:22]
+  wire  rf_reset; // @[IDstage.scala 208:22]
+  wire [4:0] rf_io_req_1_addr; // @[IDstage.scala 208:22]
+  wire [4:0] rf_io_req_2_addr; // @[IDstage.scala 208:22]
+  wire [4:0] rf_io_req_3_addr; // @[IDstage.scala 208:22]
+  wire [31:0] rf_io_req_3_data; // @[IDstage.scala 208:22]
+  wire  rf_io_req_3_w_en; // @[IDstage.scala 208:22]
+  wire [31:0] rf_io_resp_1_data; // @[IDstage.scala 208:22]
+  wire [31:0] rf_io_resp_2_data; // @[IDstage.scala 208:22]
+  wire [6:0] cu_io_opcode; // @[IDstage.scala 209:22]
+  wire [2:0] cu_io_funct3; // @[IDstage.scala 209:22]
+  wire [6:0] cu_io_funct7; // @[IDstage.scala 209:22]
+  wire [4:0] cu_io_uop; // @[IDstage.scala 209:22]
+  wire  cu_io_ALUSrcD; // @[IDstage.scala 209:22]
+  wire [1:0] cu_io_immSel; // @[IDstage.scala 209:22]
+  wire  cu_io_BranchD; // @[IDstage.scala 209:22]
+  wire  cu_io_JumpD; // @[IDstage.scala 209:22]
+  wire  cu_io_RegWriteD; // @[IDstage.scala 209:22]
+  wire  cu_io_XcptInvalid; // @[IDstage.scala 209:22]
+  wire [24:0] sigex_io_imm_in; // @[IDstage.scala 210:23]
+  wire [1:0] sigex_io_sel; // @[IDstage.scala 210:23]
+  wire [31:0] sigex_io_imm_out; // @[IDstage.scala 210:23]
+  regFile rf ( // @[IDstage.scala 208:22]
     .clock(rf_clock),
     .reset(rf_reset),
     .io_req_1_addr(rf_io_req_1_addr),
@@ -807,76 +842,80 @@ module ID(
     .io_resp_1_data(rf_io_resp_1_data),
     .io_resp_2_data(rf_io_resp_2_data)
   );
-  ControlUnit cu ( // @[IDstage.scala 260:23]
+  ControlUnit cu ( // @[IDstage.scala 209:22]
     .io_opcode(cu_io_opcode),
     .io_funct3(cu_io_funct3),
     .io_funct7(cu_io_funct7),
-    .io_taken(cu_io_taken),
     .io_uop(cu_io_uop),
-    .io_bop(cu_io_bop),
-    .io_ALUsrc(cu_io_ALUsrc),
+    .io_ALUSrcD(cu_io_ALUSrcD),
     .io_immSel(cu_io_immSel),
-    .io_flush(cu_io_flush),
+    .io_BranchD(cu_io_BranchD),
+    .io_JumpD(cu_io_JumpD),
+    .io_RegWriteD(cu_io_RegWriteD),
     .io_XcptInvalid(cu_io_XcptInvalid)
   );
-  SignExtend sigex ( // @[IDstage.scala 261:23]
+  SignExtend sigex ( // @[IDstage.scala 210:23]
     .io_imm_in(sigex_io_imm_in),
     .io_sel(sigex_io_sel),
     .io_imm_out(sigex_io_imm_out)
   );
-  Comparator compr ( // @[IDstage.scala 262:23]
-    .io_a(compr_io_a),
-    .io_b(compr_io_b),
-    .io_sel(compr_io_sel),
-    .io_taken(compr_io_taken)
-  );
-  assign io_uop = cu_io_uop; // @[IDstage.scala 295:20]
-  assign io_ALUsrc = cu_io_ALUsrc; // @[IDstage.scala 299:20]
-  assign io_immExtnd = sigex_io_imm_out; // @[IDstage.scala 297:20]
-  assign io_XcptInvalid = cu_io_XcptInvalid; // @[IDstage.scala 296:20]
-  assign io_flush = cu_io_flush; // @[IDstage.scala 302:20]
-  assign io_rd_out = io_inst[11:7]; // @[IDstage.scala 256:25]
-  assign io_operandA = rf_io_resp_1_data; // @[IDstage.scala 292:20]
-  assign io_operandB = rf_io_resp_2_data; // @[IDstage.scala 293:20]
+  assign io_uop = cu_io_uop; // @[IDstage.scala 228:20]
+  assign io_RegWriteD = cu_io_RegWriteD; // @[IDstage.scala 231:20]
+  assign io_ALUSrcD = cu_io_ALUSrcD; // @[IDstage.scala 232:20]
+  assign io_ImmExtD = sigex_io_imm_out; // @[IDstage.scala 230:20]
+  assign io_BranchD = cu_io_BranchD; // @[IDstage.scala 233:20]
+  assign io_JumpD = cu_io_JumpD; // @[IDstage.scala 234:20]
+  assign io_XcptInvalid = cu_io_XcptInvalid; // @[IDstage.scala 229:20]
+  assign io_rdD = io_inst[11:7]; // @[IDstage.scala 206:25]
+  assign io_RD1D = rf_io_resp_1_data; // @[IDstage.scala 225:20]
+  assign io_RD2D = rf_io_resp_2_data; // @[IDstage.scala 226:20]
+  assign io_pcD_out = io_pcD; // @[IDstage.scala 235:21]
+  assign io_pcPlus4D_out = io_pcPlus4D; // @[IDstage.scala 236:21]
   assign rf_clock = clock;
   assign rf_reset = reset;
-  assign rf_io_req_1_addr = io_inst[19:15]; // @[IDstage.scala 254:25]
-  assign rf_io_req_2_addr = io_inst[24:20]; // @[IDstage.scala 255:25]
-  assign rf_io_req_3_addr = io_rd_in; // @[IDstage.scala 277:22]
-  assign rf_io_req_3_data = io_write_data; // @[IDstage.scala 279:22]
-  assign rf_io_req_3_w_en = io_w_en; // @[IDstage.scala 278:22]
-  assign cu_io_opcode = io_inst[6:0]; // @[IDstage.scala 251:25]
-  assign cu_io_funct3 = io_inst[14:12]; // @[IDstage.scala 252:25]
-  assign cu_io_funct7 = io_inst[31:25]; // @[IDstage.scala 253:25]
-  assign cu_io_taken = compr_io_taken; // @[IDstage.scala 268:19]
-  assign sigex_io_imm_in = io_inst[31:7]; // @[IDstage.scala 257:25]
-  assign sigex_io_sel = cu_io_immSel; // @[IDstage.scala 272:21]
-  assign compr_io_a = rf_io_resp_1_data; // @[IDstage.scala 282:18]
-  assign compr_io_b = rf_io_resp_2_data; // @[IDstage.scala 283:18]
-  assign compr_io_sel = cu_io_bop; // @[IDstage.scala 284:18]
+  assign rf_io_req_1_addr = io_inst[19:15]; // @[IDstage.scala 204:25]
+  assign rf_io_req_2_addr = io_inst[24:20]; // @[IDstage.scala 205:25]
+  assign rf_io_req_3_addr = io_rdW; // @[IDstage.scala 221:22]
+  assign rf_io_req_3_data = io_ResultW; // @[IDstage.scala 223:22]
+  assign rf_io_req_3_w_en = io_RegWriteW; // @[IDstage.scala 222:22]
+  assign cu_io_opcode = io_inst[6:0]; // @[IDstage.scala 201:25]
+  assign cu_io_funct3 = io_inst[14:12]; // @[IDstage.scala 202:25]
+  assign cu_io_funct7 = io_inst[31:25]; // @[IDstage.scala 203:25]
+  assign sigex_io_imm_in = io_inst[31:7]; // @[IDstage.scala 216:31]
+  assign sigex_io_sel = cu_io_immSel; // @[IDstage.scala 217:21]
 endmodule
 module IDBarrier(
   input         clock,
   input         reset,
-  input  [4:0]  io_inUOP,
-  input  [4:0]  io_inRD,
-  input  [31:0] io_inOperandA,
-  input  [31:0] io_inOperandB,
-  input         io_inXcptInvalid,
-  input         io_inALUsrc,
-  input  [31:0] io_inImmExtnd,
-  input  [4:0]  io_rs1_ID,
-  input  [4:0]  io_rs2_ID,
-  output [4:0]  io_rs1_EX,
-  output [4:0]  io_rs2_EX,
-  output [4:0]  io_outUOP,
-  output [4:0]  io_outRD,
-  output [31:0] io_outOperandA,
-  output [31:0] io_outOperandB,
-  output        io_outXcptInvalid,
-  output        io_outWrten,
-  output        io_outALUsrc,
-  output [31:0] io_outImmExtnd
+  input  [4:0]  io_uopD,
+  input  [4:0]  io_rdD,
+  input  [31:0] io_RD1D,
+  input  [31:0] io_RD2D,
+  input         io_XcptInvalidD,
+  input         io_RegWriteD,
+  input         io_ALUSrcD,
+  input  [31:0] io_ImmExtD,
+  input         io_BranchD,
+  input         io_JumpD,
+  input  [31:0] io_PCD,
+  input  [31:0] io_PCPlus4D,
+  input  [4:0]  io_rs1D,
+  input  [4:0]  io_rs2D,
+  input         io_CLR,
+  output [4:0]  io_Rs1E,
+  output [4:0]  io_Rs2E,
+  output [4:0]  io_uopE,
+  output [4:0]  io_rdE,
+  output [31:0] io_RD1E,
+  output [31:0] io_RD2E,
+  output        io_XcptInvalidE,
+  output        io_RegWriteE,
+  output        io_ALUSrcE,
+  output [31:0] io_ImmExtE,
+  output        io_BranchE,
+  output        io_JumpE,
+  output [31:0] io_PCE,
+  output [31:0] io_PCPlus4E
 );
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_0;
@@ -889,77 +928,137 @@ module IDBarrier(
   reg [31:0] _RAND_7;
   reg [31:0] _RAND_8;
   reg [31:0] _RAND_9;
+  reg [31:0] _RAND_10;
+  reg [31:0] _RAND_11;
+  reg [31:0] _RAND_12;
+  reg [31:0] _RAND_13;
 `endif // RANDOMIZE_REG_INIT
-  reg [4:0] uop; // @[IDbarrier.scala 73:30]
-  reg  XcptInvalid; // @[IDbarrier.scala 74:30]
-  reg [4:0] rd; // @[IDbarrier.scala 75:30]
-  reg [31:0] operandA; // @[IDbarrier.scala 76:30]
-  reg [31:0] operandB; // @[IDbarrier.scala 77:30]
-  reg  wrten; // @[IDbarrier.scala 78:30]
-  reg  ALUsrc; // @[IDbarrier.scala 79:30]
-  reg [31:0] immExtnd; // @[IDbarrier.scala 80:30]
-  reg [4:0] rs1Addr; // @[IDbarrier.scala 81:30]
-  reg [4:0] rs2Addr; // @[IDbarrier.scala 82:30]
-  assign io_rs1_EX = rs1Addr; // @[IDbarrier.scala 107:24]
-  assign io_rs2_EX = rs2Addr; // @[IDbarrier.scala 108:24]
-  assign io_outUOP = uop; // @[IDbarrier.scala 99:24]
-  assign io_outRD = rd; // @[IDbarrier.scala 101:24]
-  assign io_outOperandA = operandA; // @[IDbarrier.scala 102:24]
-  assign io_outOperandB = operandB; // @[IDbarrier.scala 103:24]
-  assign io_outXcptInvalid = XcptInvalid; // @[IDbarrier.scala 100:24]
-  assign io_outWrten = wrten; // @[IDbarrier.scala 104:24]
-  assign io_outALUsrc = ALUsrc; // @[IDbarrier.scala 105:24]
-  assign io_outImmExtnd = immExtnd; // @[IDbarrier.scala 106:24]
+  reg [4:0] uop; // @[IDbarrier.scala 78:31]
+  reg  XcptInvalid; // @[IDbarrier.scala 79:31]
+  reg [4:0] rd; // @[IDbarrier.scala 80:31]
+  reg [31:0] RD1; // @[IDbarrier.scala 81:31]
+  reg [31:0] RD2; // @[IDbarrier.scala 82:31]
+  reg  RegWrite; // @[IDbarrier.scala 83:31]
+  reg  ALUSrc; // @[IDbarrier.scala 84:31]
+  reg [31:0] ImmExt; // @[IDbarrier.scala 85:31]
+  reg  Branch; // @[IDbarrier.scala 86:31]
+  reg  Jump; // @[IDbarrier.scala 87:31]
+  reg [31:0] PC; // @[IDbarrier.scala 88:31]
+  reg [31:0] PCPlus4; // @[IDbarrier.scala 89:31]
+  reg [4:0] rs1Addr; // @[IDbarrier.scala 90:31]
+  reg [4:0] rs2Addr; // @[IDbarrier.scala 91:31]
+  assign io_Rs1E = rs1Addr; // @[IDbarrier.scala 137:21]
+  assign io_Rs2E = rs2Addr; // @[IDbarrier.scala 138:21]
+  assign io_uopE = uop; // @[IDbarrier.scala 125:21]
+  assign io_rdE = rd; // @[IDbarrier.scala 127:21]
+  assign io_RD1E = RD1; // @[IDbarrier.scala 128:21]
+  assign io_RD2E = RD2; // @[IDbarrier.scala 129:21]
+  assign io_XcptInvalidE = XcptInvalid; // @[IDbarrier.scala 126:21]
+  assign io_RegWriteE = RegWrite; // @[IDbarrier.scala 130:21]
+  assign io_ALUSrcE = ALUSrc; // @[IDbarrier.scala 131:21]
+  assign io_ImmExtE = ImmExt; // @[IDbarrier.scala 132:21]
+  assign io_BranchE = Branch; // @[IDbarrier.scala 133:21]
+  assign io_JumpE = Jump; // @[IDbarrier.scala 134:21]
+  assign io_PCE = PC; // @[IDbarrier.scala 135:21]
+  assign io_PCPlus4E = PCPlus4; // @[IDbarrier.scala 136:21]
   always @(posedge clock) begin
-    if (reset) begin // @[IDbarrier.scala 73:30]
-      uop <= 5'h14; // @[IDbarrier.scala 73:30]
+    if (reset) begin // @[IDbarrier.scala 78:31]
+      uop <= 5'h1c; // @[IDbarrier.scala 78:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      uop <= 5'h1c; // @[IDbarrier.scala 94:21]
     end else begin
-      uop <= io_inUOP; // @[IDbarrier.scala 86:17]
+      uop <= io_uopD; // @[IDbarrier.scala 109:21]
     end
-    if (reset) begin // @[IDbarrier.scala 74:30]
-      XcptInvalid <= 1'h0; // @[IDbarrier.scala 74:30]
+    if (reset) begin // @[IDbarrier.scala 79:31]
+      XcptInvalid <= 1'h0; // @[IDbarrier.scala 79:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      XcptInvalid <= 1'h0; // @[IDbarrier.scala 95:21]
     end else begin
-      XcptInvalid <= io_inXcptInvalid; // @[IDbarrier.scala 90:17]
+      XcptInvalid <= io_XcptInvalidD; // @[IDbarrier.scala 113:21]
     end
-    if (reset) begin // @[IDbarrier.scala 75:30]
-      rd <= 5'h0; // @[IDbarrier.scala 75:30]
+    if (reset) begin // @[IDbarrier.scala 80:31]
+      rd <= 5'h0; // @[IDbarrier.scala 80:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      rd <= 5'h0; // @[IDbarrier.scala 96:21]
     end else begin
-      rd <= io_inRD; // @[IDbarrier.scala 87:17]
+      rd <= io_rdD; // @[IDbarrier.scala 110:21]
     end
-    if (reset) begin // @[IDbarrier.scala 76:30]
-      operandA <= 32'h0; // @[IDbarrier.scala 76:30]
+    if (reset) begin // @[IDbarrier.scala 81:31]
+      RD1 <= 32'h0; // @[IDbarrier.scala 81:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      RD1 <= 32'h0; // @[IDbarrier.scala 97:21]
     end else begin
-      operandA <= io_inOperandA; // @[IDbarrier.scala 88:17]
+      RD1 <= io_RD1D; // @[IDbarrier.scala 111:21]
     end
-    if (reset) begin // @[IDbarrier.scala 77:30]
-      operandB <= 32'h0; // @[IDbarrier.scala 77:30]
+    if (reset) begin // @[IDbarrier.scala 82:31]
+      RD2 <= 32'h0; // @[IDbarrier.scala 82:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      RD2 <= 32'h0; // @[IDbarrier.scala 98:21]
     end else begin
-      operandB <= io_inOperandB; // @[IDbarrier.scala 89:17]
+      RD2 <= io_RD2D; // @[IDbarrier.scala 112:21]
     end
-    if (reset) begin // @[IDbarrier.scala 78:30]
-      wrten <= 1'h0; // @[IDbarrier.scala 78:30]
+    if (reset) begin // @[IDbarrier.scala 83:31]
+      RegWrite <= 1'h0; // @[IDbarrier.scala 83:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      RegWrite <= 1'h0; // @[IDbarrier.scala 99:21]
     end else begin
-      wrten <= 1'h1; // @[IDbarrier.scala 91:17]
+      RegWrite <= io_RegWriteD; // @[IDbarrier.scala 114:21]
     end
-    if (reset) begin // @[IDbarrier.scala 79:30]
-      ALUsrc <= 1'h0; // @[IDbarrier.scala 79:30]
+    if (reset) begin // @[IDbarrier.scala 84:31]
+      ALUSrc <= 1'h0; // @[IDbarrier.scala 84:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      ALUSrc <= 1'h0; // @[IDbarrier.scala 100:21]
     end else begin
-      ALUsrc <= io_inALUsrc; // @[IDbarrier.scala 92:17]
+      ALUSrc <= io_ALUSrcD; // @[IDbarrier.scala 115:21]
     end
-    if (reset) begin // @[IDbarrier.scala 80:30]
-      immExtnd <= 32'h0; // @[IDbarrier.scala 80:30]
+    if (reset) begin // @[IDbarrier.scala 85:31]
+      ImmExt <= 32'h0; // @[IDbarrier.scala 85:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      ImmExt <= 32'h0; // @[IDbarrier.scala 101:21]
     end else begin
-      immExtnd <= io_inImmExtnd; // @[IDbarrier.scala 93:17]
+      ImmExt <= io_ImmExtD; // @[IDbarrier.scala 116:21]
     end
-    if (reset) begin // @[IDbarrier.scala 81:30]
-      rs1Addr <= 5'h0; // @[IDbarrier.scala 81:30]
+    if (reset) begin // @[IDbarrier.scala 86:31]
+      Branch <= 1'h0; // @[IDbarrier.scala 86:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      Branch <= 1'h0; // @[IDbarrier.scala 102:21]
     end else begin
-      rs1Addr <= io_rs1_ID; // @[IDbarrier.scala 94:17]
+      Branch <= io_BranchD; // @[IDbarrier.scala 117:21]
     end
-    if (reset) begin // @[IDbarrier.scala 82:30]
-      rs2Addr <= 5'h0; // @[IDbarrier.scala 82:30]
+    if (reset) begin // @[IDbarrier.scala 87:31]
+      Jump <= 1'h0; // @[IDbarrier.scala 87:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      Jump <= 1'h0; // @[IDbarrier.scala 103:21]
     end else begin
-      rs2Addr <= io_rs2_ID; // @[IDbarrier.scala 95:17]
+      Jump <= io_JumpD; // @[IDbarrier.scala 118:21]
+    end
+    if (reset) begin // @[IDbarrier.scala 88:31]
+      PC <= 32'h0; // @[IDbarrier.scala 88:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      PC <= 32'h0; // @[IDbarrier.scala 104:21]
+    end else begin
+      PC <= io_PCD; // @[IDbarrier.scala 119:21]
+    end
+    if (reset) begin // @[IDbarrier.scala 89:31]
+      PCPlus4 <= 32'h0; // @[IDbarrier.scala 89:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      PCPlus4 <= 32'h0; // @[IDbarrier.scala 105:21]
+    end else begin
+      PCPlus4 <= io_PCPlus4D; // @[IDbarrier.scala 120:21]
+    end
+    if (reset) begin // @[IDbarrier.scala 90:31]
+      rs1Addr <= 5'h0; // @[IDbarrier.scala 90:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      rs1Addr <= 5'h0; // @[IDbarrier.scala 106:21]
+    end else begin
+      rs1Addr <= io_rs1D; // @[IDbarrier.scala 121:21]
+    end
+    if (reset) begin // @[IDbarrier.scala 91:31]
+      rs2Addr <= 5'h0; // @[IDbarrier.scala 91:31]
+    end else if (io_CLR) begin // @[IDbarrier.scala 93:18]
+      rs2Addr <= 5'h0; // @[IDbarrier.scala 107:21]
+    end else begin
+      rs2Addr <= io_rs2D; // @[IDbarrier.scala 122:21]
     end
   end
 // Register and memory initialization
@@ -1005,19 +1104,27 @@ initial begin
   _RAND_2 = {1{`RANDOM}};
   rd = _RAND_2[4:0];
   _RAND_3 = {1{`RANDOM}};
-  operandA = _RAND_3[31:0];
+  RD1 = _RAND_3[31:0];
   _RAND_4 = {1{`RANDOM}};
-  operandB = _RAND_4[31:0];
+  RD2 = _RAND_4[31:0];
   _RAND_5 = {1{`RANDOM}};
-  wrten = _RAND_5[0:0];
+  RegWrite = _RAND_5[0:0];
   _RAND_6 = {1{`RANDOM}};
-  ALUsrc = _RAND_6[0:0];
+  ALUSrc = _RAND_6[0:0];
   _RAND_7 = {1{`RANDOM}};
-  immExtnd = _RAND_7[31:0];
+  ImmExt = _RAND_7[31:0];
   _RAND_8 = {1{`RANDOM}};
-  rs1Addr = _RAND_8[4:0];
+  Branch = _RAND_8[0:0];
   _RAND_9 = {1{`RANDOM}};
-  rs2Addr = _RAND_9[4:0];
+  Jump = _RAND_9[0:0];
+  _RAND_10 = {1{`RANDOM}};
+  PC = _RAND_10[31:0];
+  _RAND_11 = {1{`RANDOM}};
+  PCPlus4 = _RAND_11[31:0];
+  _RAND_12 = {1{`RANDOM}};
+  rs1Addr = _RAND_12[4:0];
+  _RAND_13 = {1{`RANDOM}};
+  rs2Addr = _RAND_13[4:0];
 `endif // RANDOMIZE_REG_INIT
   `endif // RANDOMIZE
 end // initial
@@ -1030,102 +1137,123 @@ module ALU(
   input  [31:0] io_operandA,
   input  [31:0] io_operandB,
   input  [3:0]  io_operation,
-  output [31:0] io_aluResult
+  output [31:0] io_aluResult,
+  output        io_zero
 );
-  wire [4:0] shift_amount = io_operandB[4:0]; // @[ALU.scala 44:33]
-  wire [31:0] _io_aluResult_T_1 = io_operandA + io_operandB; // @[ALU.scala 54:35]
-  wire [31:0] _io_aluResult_T_3 = io_operandA - io_operandB; // @[ALU.scala 61:36]
-  wire [31:0] _io_aluResult_T_4 = io_operandA & io_operandB; // @[ALU.scala 66:35]
-  wire [31:0] _io_aluResult_T_5 = io_operandA | io_operandB; // @[ALU.scala 71:35]
-  wire [31:0] _io_aluResult_T_6 = io_operandA ^ io_operandB; // @[ALU.scala 76:35]
-  wire [62:0] _GEN_10 = {{31'd0}, io_operandA}; // @[ALU.scala 81:36]
-  wire [62:0] _io_aluResult_T_7 = _GEN_10 << shift_amount; // @[ALU.scala 81:36]
-  wire [31:0] _io_aluResult_T_8 = io_operandA >> shift_amount; // @[ALU.scala 86:35]
-  wire [31:0] _io_aluResult_T_11 = $signed(io_operandA) >>> shift_amount; // @[ALU.scala 91:60]
-  wire  _GEN_0 = 4'h9 == io_operation & io_operandA < io_operandB; // @[ALU.scala 101:20 46:16 50:24]
-  wire  _GEN_1 = 4'h8 == io_operation ? $signed(io_operandA) < $signed(io_operandB) : _GEN_0; // @[ALU.scala 50:24 96:20]
-  wire [31:0] _GEN_2 = 4'h7 == io_operation ? _io_aluResult_T_11 : {{31'd0}, _GEN_1}; // @[ALU.scala 50:24 91:20]
-  wire [31:0] _GEN_3 = 4'h6 == io_operation ? _io_aluResult_T_8 : _GEN_2; // @[ALU.scala 50:24 86:20]
-  wire [62:0] _GEN_4 = 4'h5 == io_operation ? _io_aluResult_T_7 : {{31'd0}, _GEN_3}; // @[ALU.scala 50:24 81:20]
-  wire [62:0] _GEN_5 = 4'h4 == io_operation ? {{31'd0}, _io_aluResult_T_6} : _GEN_4; // @[ALU.scala 50:24 76:20]
-  wire [62:0] _GEN_6 = 4'h3 == io_operation ? {{31'd0}, _io_aluResult_T_5} : _GEN_5; // @[ALU.scala 50:24 71:20]
-  wire [62:0] _GEN_7 = 4'h2 == io_operation ? {{31'd0}, _io_aluResult_T_4} : _GEN_6; // @[ALU.scala 50:24 66:20]
-  wire [62:0] _GEN_8 = 4'h1 == io_operation ? {{31'd0}, _io_aluResult_T_3} : _GEN_7; // @[ALU.scala 50:24 61:20]
-  wire [62:0] _GEN_9 = 4'h0 == io_operation ? {{31'd0}, _io_aluResult_T_1} : _GEN_8; // @[ALU.scala 50:24 54:20]
-  assign io_aluResult = _GEN_9[31:0];
+  wire [4:0] shift_amount = io_operandB[4:0]; // @[ALU.scala 47:33]
+  wire [31:0] _io_aluResult_T_1 = io_operandA + io_operandB; // @[ALU.scala 53:49]
+  wire [31:0] _io_aluResult_T_3 = io_operandA - io_operandB; // @[ALU.scala 54:50]
+  wire [31:0] _io_aluResult_T_4 = io_operandA & io_operandB; // @[ALU.scala 55:49]
+  wire [31:0] _io_aluResult_T_5 = io_operandA | io_operandB; // @[ALU.scala 56:49]
+  wire [31:0] _io_aluResult_T_6 = io_operandA ^ io_operandB; // @[ALU.scala 57:49]
+  wire [62:0] _GEN_0 = {{31'd0}, io_operandA}; // @[ALU.scala 58:50]
+  wire [62:0] _io_aluResult_T_7 = _GEN_0 << shift_amount; // @[ALU.scala 58:50]
+  wire [31:0] _io_aluResult_T_8 = io_operandA >> shift_amount; // @[ALU.scala 59:49]
+  wire [31:0] _io_aluResult_T_11 = $signed(io_operandA) >>> shift_amount; // @[ALU.scala 60:74]
+  wire  _GEN_6 = 4'h9 == io_operation & io_operandA < io_operandB; // @[ALU.scala 51:24 62:34]
+  wire  _GEN_7 = 4'h8 == io_operation ? $signed(io_operandA) < $signed(io_operandB) : _GEN_6; // @[ALU.scala 51:24 61:34]
+  wire [31:0] _GEN_8 = 4'h7 == io_operation ? _io_aluResult_T_11 : {{31'd0}, _GEN_7}; // @[ALU.scala 51:24 60:34]
+  wire [31:0] _GEN_9 = 4'h6 == io_operation ? _io_aluResult_T_8 : _GEN_8; // @[ALU.scala 51:24 59:34]
+  wire [62:0] _GEN_10 = 4'h5 == io_operation ? _io_aluResult_T_7 : {{31'd0}, _GEN_9}; // @[ALU.scala 51:24 58:34]
+  wire [62:0] _GEN_11 = 4'h4 == io_operation ? {{31'd0}, _io_aluResult_T_6} : _GEN_10; // @[ALU.scala 51:24 57:34]
+  wire [62:0] _GEN_12 = 4'h3 == io_operation ? {{31'd0}, _io_aluResult_T_5} : _GEN_11; // @[ALU.scala 51:24 56:34]
+  wire [62:0] _GEN_13 = 4'h2 == io_operation ? {{31'd0}, _io_aluResult_T_4} : _GEN_12; // @[ALU.scala 51:24 55:34]
+  wire [62:0] _GEN_14 = 4'h1 == io_operation ? {{31'd0}, _io_aluResult_T_3} : _GEN_13; // @[ALU.scala 51:24 54:34]
+  wire [62:0] _GEN_15 = 4'h0 == io_operation ? {{31'd0}, _io_aluResult_T_1} : _GEN_14; // @[ALU.scala 51:24 53:34]
+  assign io_aluResult = _GEN_15[31:0];
+  assign io_zero = io_aluResult == 32'h0; // @[ALU.scala 70:27]
 endmodule
 module ALUcontrol(
   input  [4:0] io_uop,
   output [3:0] io_mapped
 );
-  wire [3:0] _GEN_0 = 5'h9 == io_uop | 5'h10 == io_uop ? 4'h9 : 4'h0; // @[EXstage.scala 50:15 52:18 62:43]
-  wire [3:0] _GEN_1 = 5'h8 == io_uop | 5'ha == io_uop ? 4'h8 : _GEN_0; // @[EXstage.scala 52:18 61:43]
-  wire [3:0] _GEN_2 = 5'h7 == io_uop | 5'h12 == io_uop ? 4'h7 : _GEN_1; // @[EXstage.scala 52:18 60:43]
-  wire [3:0] _GEN_3 = 5'h6 == io_uop | 5'h11 == io_uop ? 4'h6 : _GEN_2; // @[EXstage.scala 52:18 59:43]
-  wire [3:0] _GEN_4 = 5'h5 == io_uop | 5'hf == io_uop ? 4'h5 : _GEN_3; // @[EXstage.scala 52:18 58:43]
-  wire [3:0] _GEN_5 = 5'h4 == io_uop | 5'hc == io_uop ? 4'h4 : _GEN_4; // @[EXstage.scala 52:18 57:43]
-  wire [3:0] _GEN_6 = 5'h3 == io_uop | 5'hd == io_uop ? 4'h3 : _GEN_5; // @[EXstage.scala 52:18 56:43]
-  wire [3:0] _GEN_7 = 5'h2 == io_uop | 5'he == io_uop ? 4'h2 : _GEN_6; // @[EXstage.scala 52:18 55:43]
-  wire [3:0] _GEN_8 = 5'h1 == io_uop ? 4'h1 : _GEN_7; // @[EXstage.scala 52:18 54:43]
-  assign io_mapped = 5'h0 == io_uop | 5'hb == io_uop ? 4'h0 : _GEN_8; // @[EXstage.scala 52:18 53:43]
+  wire [3:0] _GEN_1 = 5'h19 == io_uop ? 4'hf : 4'h0; // @[EXstage.scala 50:18 66:31]
+  wire [3:0] _GEN_2 = 5'h18 == io_uop ? 4'he : _GEN_1; // @[EXstage.scala 50:18 65:31]
+  wire [3:0] _GEN_3 = 5'h17 == io_uop ? 4'hd : _GEN_2; // @[EXstage.scala 50:18 64:31]
+  wire [3:0] _GEN_4 = 5'h16 == io_uop ? 4'hc : _GEN_3; // @[EXstage.scala 50:18 63:31]
+  wire [3:0] _GEN_5 = 5'h15 == io_uop ? 4'hb : _GEN_4; // @[EXstage.scala 50:18 62:31]
+  wire [3:0] _GEN_6 = 5'h14 == io_uop ? 4'ha : _GEN_5; // @[EXstage.scala 50:18 61:31]
+  wire [3:0] _GEN_7 = 5'h9 == io_uop | 5'h10 == io_uop ? 4'h9 : _GEN_6; // @[EXstage.scala 50:18 60:43]
+  wire [3:0] _GEN_8 = 5'h8 == io_uop | 5'ha == io_uop ? 4'h8 : _GEN_7; // @[EXstage.scala 50:18 59:43]
+  wire [3:0] _GEN_9 = 5'h7 == io_uop | 5'h12 == io_uop ? 4'h7 : _GEN_8; // @[EXstage.scala 50:18 58:43]
+  wire [3:0] _GEN_10 = 5'h6 == io_uop | 5'h11 == io_uop ? 4'h6 : _GEN_9; // @[EXstage.scala 50:18 57:43]
+  wire [3:0] _GEN_11 = 5'h5 == io_uop | 5'hf == io_uop ? 4'h5 : _GEN_10; // @[EXstage.scala 50:18 56:43]
+  wire [3:0] _GEN_12 = 5'h4 == io_uop | 5'hc == io_uop ? 4'h4 : _GEN_11; // @[EXstage.scala 50:18 55:43]
+  wire [3:0] _GEN_13 = 5'h3 == io_uop | 5'hd == io_uop ? 4'h3 : _GEN_12; // @[EXstage.scala 50:18 54:43]
+  wire [3:0] _GEN_14 = 5'h2 == io_uop | 5'he == io_uop ? 4'h2 : _GEN_13; // @[EXstage.scala 50:18 53:43]
+  wire [3:0] _GEN_15 = 5'h1 == io_uop ? 4'h1 : _GEN_14; // @[EXstage.scala 50:18 52:43]
+  assign io_mapped = 5'h0 == io_uop | 5'hb == io_uop ? 4'h0 : _GEN_15; // @[EXstage.scala 50:18 51:43]
 endmodule
 module EXstage(
-  input  [31:0] io_operandA,
-  input  [31:0] io_operandB,
-  input  [31:0] io_immExtnd,
-  input         io_ALUsrc,
-  input  [4:0]  io_rd_in,
-  input  [4:0]  io_uop,
-  input         io_wrten_in,
-  input         io_XcptInvalid,
-  input  [1:0]  io_forwardSelA,
-  input  [1:0]  io_forwardSelB,
-  input  [31:0] io_aluResultWB,
-  input  [31:0] io_aluResultMEM,
-  output [31:0] io_aluResult,
-  output        io_exception,
-  output [4:0]  io_rd,
-  output        io_wrten
+  input  [31:0] io_RD1E,
+  input  [31:0] io_RD2E,
+  input  [31:0] io_ImmExtE,
+  input         io_ALUSrcE,
+  input  [4:0]  io_rdE,
+  input  [4:0]  io_uopE,
+  input         io_RegWriteE,
+  input         io_XcptInvalidE,
+  input  [1:0]  io_ForwardAE,
+  input  [1:0]  io_ForwardBE,
+  input  [31:0] io_ResultW,
+  input  [31:0] io_ALUResultM,
+  input  [31:0] io_PCE,
+  input  [31:0] io_PCPlus4E,
+  input         io_BranchE,
+  input         io_JumpE,
+  output [31:0] io_ALUResultE,
+  output        io_exceptionE,
+  output [4:0]  io_rdOutE,
+  output        io_RegWriteOutE,
+  output        io_PCSrcE,
+  output [31:0] io_PCTargetE
 );
-  wire [31:0] ALU_io_operandA; // @[EXstage.scala 91:26]
-  wire [31:0] ALU_io_operandB; // @[EXstage.scala 91:26]
-  wire [3:0] ALU_io_operation; // @[EXstage.scala 91:26]
-  wire [31:0] ALU_io_aluResult; // @[EXstage.scala 91:26]
-  wire [4:0] ALUcontrol_io_uop; // @[EXstage.scala 92:26]
-  wire [3:0] ALUcontrol_io_mapped; // @[EXstage.scala 92:26]
-  wire [31:0] _GEN_0 = 2'h1 == io_forwardSelA ? io_aluResultWB : io_operandA; // @[EXstage.scala 100:26 102:24 99:8]
-  wire [31:0] _GEN_2 = 2'h1 == io_forwardSelB ? io_aluResultWB : io_operandB; // @[EXstage.scala 106:26 108:24 105:8]
-  wire [31:0] srcB = 2'h2 == io_forwardSelB ? io_aluResultMEM : _GEN_2; // @[EXstage.scala 106:26 107:24]
-  ALU ALU ( // @[EXstage.scala 91:26]
+  wire [31:0] ALU_io_operandA; // @[EXstage.scala 96:26]
+  wire [31:0] ALU_io_operandB; // @[EXstage.scala 96:26]
+  wire [3:0] ALU_io_operation; // @[EXstage.scala 96:26]
+  wire [31:0] ALU_io_aluResult; // @[EXstage.scala 96:26]
+  wire  ALU_io_zero; // @[EXstage.scala 96:26]
+  wire [4:0] ALUcontrol_io_uop; // @[EXstage.scala 97:26]
+  wire [3:0] ALUcontrol_io_mapped; // @[EXstage.scala 97:26]
+  wire [31:0] _GEN_0 = 2'h1 == io_ForwardAE ? io_ResultW : io_RD1E; // @[EXstage.scala 103:24 105:24 102:8]
+  wire [31:0] _GEN_2 = 2'h1 == io_ForwardBE ? io_ResultW : io_RD2E; // @[EXstage.scala 108:24 110:24 107:8]
+  wire [31:0] srcB = 2'h2 == io_ForwardBE ? io_ALUResultM : _GEN_2; // @[EXstage.scala 108:24 109:24]
+  wire  jalr = io_JumpE & io_BranchE; // @[EXstage.scala 117:23]
+  wire [31:0] pcTargetAdder = io_PCE + io_ImmExtE; // @[EXstage.scala 118:30]
+  wire [31:0] _io_PCTargetE_T_1 = ALU_io_aluResult & 32'hfffffffe; // @[EXstage.scala 121:47]
+  ALU ALU ( // @[EXstage.scala 96:26]
     .io_operandA(ALU_io_operandA),
     .io_operandB(ALU_io_operandB),
     .io_operation(ALU_io_operation),
-    .io_aluResult(ALU_io_aluResult)
+    .io_aluResult(ALU_io_aluResult),
+    .io_zero(ALU_io_zero)
   );
-  ALUcontrol ALUcontrol ( // @[EXstage.scala 92:26]
+  ALUcontrol ALUcontrol ( // @[EXstage.scala 97:26]
     .io_uop(ALUcontrol_io_uop),
     .io_mapped(ALUcontrol_io_mapped)
   );
-  assign io_aluResult = ALU_io_aluResult; // @[EXstage.scala 115:16]
-  assign io_exception = io_XcptInvalid; // @[EXstage.scala 116:16]
-  assign io_rd = io_rd_in; // @[EXstage.scala 117:16]
-  assign io_wrten = io_wrten_in; // @[EXstage.scala 118:16]
-  assign ALU_io_operandA = 2'h2 == io_forwardSelA ? io_aluResultMEM : _GEN_0; // @[EXstage.scala 100:26 101:24]
-  assign ALU_io_operandB = io_ALUsrc ? io_immExtnd : srcB; // @[EXstage.scala 112:26]
-  assign ALU_io_operation = ALUcontrol_io_mapped; // @[EXstage.scala 113:20]
-  assign ALUcontrol_io_uop = io_uop; // @[EXstage.scala 94:21]
+  assign io_ALUResultE = io_JumpE ? io_PCPlus4E : ALU_io_aluResult; // @[EXstage.scala 123:25]
+  assign io_exceptionE = io_XcptInvalidE; // @[EXstage.scala 124:19]
+  assign io_rdOutE = io_rdE; // @[EXstage.scala 125:19]
+  assign io_RegWriteOutE = io_RegWriteE; // @[EXstage.scala 126:19]
+  assign io_PCSrcE = io_BranchE & ALU_io_zero | io_JumpE; // @[EXstage.scala 120:47]
+  assign io_PCTargetE = jalr ? _io_PCTargetE_T_1 : pcTargetAdder; // @[EXstage.scala 121:22]
+  assign ALU_io_operandA = 2'h2 == io_ForwardAE ? io_ALUResultM : _GEN_0; // @[EXstage.scala 103:24 104:24]
+  assign ALU_io_operandB = io_ALUSrcE ? io_ImmExtE : srcB; // @[EXstage.scala 114:26]
+  assign ALU_io_operation = ALUcontrol_io_mapped; // @[EXstage.scala 115:20]
+  assign ALUcontrol_io_uop = io_uopE; // @[EXstage.scala 98:21]
 endmodule
 module EXBarrier(
   input         clock,
   input         reset,
-  input  [31:0] io_inAluResult,
-  input  [4:0]  io_inRD,
-  input         io_inXcptInvalid,
-  input         io_inWrten,
-  output [31:0] io_outAluResult,
-  output [4:0]  io_outRD,
-  output        io_outXcptInvalid,
-  output        io_outWrten
+  input  [31:0] io_ALUResultE,
+  input  [4:0]  io_rdE,
+  input         io_XcptInvalidE,
+  input         io_RegWriteE,
+  output [31:0] io_ALUResultM,
+  output [4:0]  io_rdM,
+  output        io_XcptInvalidM,
+  output        io_RegWriteM
 );
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_0;
@@ -1133,34 +1261,34 @@ module EXBarrier(
   reg [31:0] _RAND_2;
   reg [31:0] _RAND_3;
 `endif // RANDOMIZE_REG_INIT
-  reg [31:0] aluResult; // @[EXbarrier.scala 54:30]
-  reg [4:0] RD; // @[EXbarrier.scala 55:30]
-  reg  XcptInvalid; // @[EXbarrier.scala 56:30]
-  reg  wrten; // @[EXbarrier.scala 57:30]
-  assign io_outAluResult = aluResult; // @[EXbarrier.scala 68:25]
-  assign io_outRD = RD; // @[EXbarrier.scala 69:25]
-  assign io_outXcptInvalid = XcptInvalid; // @[EXbarrier.scala 70:25]
-  assign io_outWrten = wrten; // @[EXbarrier.scala 71:25]
+  reg [31:0] ALUResult; // @[EXbarrier.scala 50:28]
+  reg [4:0] rd; // @[EXbarrier.scala 51:28]
+  reg  XcptInvalid; // @[EXbarrier.scala 52:28]
+  reg  RegWrite; // @[EXbarrier.scala 53:28]
+  assign io_ALUResultM = ALUResult; // @[EXbarrier.scala 60:19]
+  assign io_rdM = rd; // @[EXbarrier.scala 61:19]
+  assign io_XcptInvalidM = XcptInvalid; // @[EXbarrier.scala 62:19]
+  assign io_RegWriteM = RegWrite; // @[EXbarrier.scala 63:19]
   always @(posedge clock) begin
-    if (reset) begin // @[EXbarrier.scala 54:30]
-      aluResult <= 32'h0; // @[EXbarrier.scala 54:30]
+    if (reset) begin // @[EXbarrier.scala 50:28]
+      ALUResult <= 32'h0; // @[EXbarrier.scala 50:28]
     end else begin
-      aluResult <= io_inAluResult; // @[EXbarrier.scala 61:17]
+      ALUResult <= io_ALUResultE; // @[EXbarrier.scala 55:15]
     end
-    if (reset) begin // @[EXbarrier.scala 55:30]
-      RD <= 5'h0; // @[EXbarrier.scala 55:30]
+    if (reset) begin // @[EXbarrier.scala 51:28]
+      rd <= 5'h0; // @[EXbarrier.scala 51:28]
     end else begin
-      RD <= io_inRD; // @[EXbarrier.scala 62:17]
+      rd <= io_rdE; // @[EXbarrier.scala 56:15]
     end
-    if (reset) begin // @[EXbarrier.scala 56:30]
-      XcptInvalid <= 1'h0; // @[EXbarrier.scala 56:30]
+    if (reset) begin // @[EXbarrier.scala 52:28]
+      XcptInvalid <= 1'h0; // @[EXbarrier.scala 52:28]
     end else begin
-      XcptInvalid <= io_inXcptInvalid; // @[EXbarrier.scala 63:17]
+      XcptInvalid <= io_XcptInvalidE; // @[EXbarrier.scala 57:15]
     end
-    if (reset) begin // @[EXbarrier.scala 57:30]
-      wrten <= 1'h0; // @[EXbarrier.scala 57:30]
+    if (reset) begin // @[EXbarrier.scala 53:28]
+      RegWrite <= 1'h0; // @[EXbarrier.scala 53:28]
     end else begin
-      wrten <= io_inWrten; // @[EXbarrier.scala 64:17]
+      RegWrite <= io_RegWriteE; // @[EXbarrier.scala 58:15]
     end
   end
 // Register and memory initialization
@@ -1200,13 +1328,13 @@ initial begin
     `endif
 `ifdef RANDOMIZE_REG_INIT
   _RAND_0 = {1{`RANDOM}};
-  aluResult = _RAND_0[31:0];
+  ALUResult = _RAND_0[31:0];
   _RAND_1 = {1{`RANDOM}};
-  RD = _RAND_1[4:0];
+  rd = _RAND_1[4:0];
   _RAND_2 = {1{`RANDOM}};
   XcptInvalid = _RAND_2[0:0];
   _RAND_3 = {1{`RANDOM}};
-  wrten = _RAND_3[0:0];
+  RegWrite = _RAND_3[0:0];
 `endif // RANDOMIZE_REG_INIT
   `endif // RANDOMIZE
 end // initial
@@ -1216,24 +1344,26 @@ end // initial
 `endif // SYNTHESIS
 endmodule
 module WBstage(
-  input  [31:0] io_aluResult,
-  input  [4:0]  io_rd,
-  input         io_wrten,
-  output [4:0]  io_regFileReq_addr,
-  output [31:0] io_regFileReq_data,
-  output        io_regFileReq_w_en
+  input  [31:0] io_ALUResultW,
+  input  [4:0]  io_rdW,
+  input         io_RegWriteW,
+  output [4:0]  io_RegWriteReq_addr,
+  output [31:0] io_RegWriteReq_data,
+  output        io_RegWriteReq_w_en,
+  output [31:0] io_ResultW
 );
-  assign io_regFileReq_addr = io_rd; // @[WBstage.scala 70:24]
-  assign io_regFileReq_data = io_aluResult; // @[WBstage.scala 71:24]
-  assign io_regFileReq_w_en = io_wrten; // @[WBstage.scala 72:24]
+  assign io_RegWriteReq_addr = io_rdW; // @[WBstage.scala 58:23]
+  assign io_RegWriteReq_data = io_ALUResultW; // @[WBstage.scala 59:23]
+  assign io_RegWriteReq_w_en = io_RegWriteW; // @[WBstage.scala 60:23]
+  assign io_ResultW = io_ALUResultW; // @[WBstage.scala 61:24]
 endmodule
 module WBBarrier(
   input         clock,
   input         reset,
-  input  [31:0] io_inCheckRes,
-  input         io_inXcptInvalid,
-  output [31:0] io_outCheckRes,
-  output        io_outXcptInvalid
+  input  [31:0] io_ResultW,
+  input         io_XcptInvalidW,
+  output [31:0] io_check_res,
+  output        io_exception
 );
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_0;
@@ -1241,18 +1371,18 @@ module WBBarrier(
 `endif // RANDOMIZE_REG_INIT
   reg [31:0] check_res; // @[WBbarrier.scala 46:26]
   reg  isInvalid; // @[WBbarrier.scala 47:26]
-  assign io_outCheckRes = check_res; // @[WBbarrier.scala 52:18]
-  assign io_outXcptInvalid = isInvalid; // @[WBbarrier.scala 53:21]
+  assign io_check_res = check_res; // @[WBbarrier.scala 52:16]
+  assign io_exception = isInvalid; // @[WBbarrier.scala 53:16]
   always @(posedge clock) begin
     if (reset) begin // @[WBbarrier.scala 46:26]
       check_res <= 32'h0; // @[WBbarrier.scala 46:26]
     end else begin
-      check_res <= io_inCheckRes; // @[WBbarrier.scala 49:13]
+      check_res <= io_ResultW; // @[WBbarrier.scala 49:13]
     end
     if (reset) begin // @[WBbarrier.scala 47:26]
       isInvalid <= 1'h0; // @[WBbarrier.scala 47:26]
     end else begin
-      isInvalid <= io_inXcptInvalid; // @[WBbarrier.scala 50:13]
+      isInvalid <= io_XcptInvalidW; // @[WBbarrier.scala 50:13]
     end
   end
 // Register and memory initialization
@@ -1324,217 +1454,290 @@ module PipelinedRV32Icore(
   input         clock,
   input         reset,
   output [31:0] io_check_res,
-  output        io_exception
+  output        io_exception,
+  output [31:0] io_PCdebug,
+  output [31:0] io_InstrDdebug,
+  output [31:0] io_PCEdebug,
+  output [31:0] io_RS1Edebug,
+  output [31:0] io_RS2Edebug,
+  output        io_BranchEdebug,
+  output        io_JumpEdebug,
+  output        io_PCSrcEdebug,
+  output [31:0] io_PCTargetEdebug,
+  output        io_RegWriteWdebug,
+  output [4:0]  io_rdWdebug
 );
-  wire  IFstage_clock; // @[core.scala 65:25]
-  wire  IFstage_reset; // @[core.scala 65:25]
-  wire [31:0] IFstage_io_inst; // @[core.scala 65:25]
-  wire  IFBarrier_clock; // @[core.scala 66:25]
-  wire  IFBarrier_reset; // @[core.scala 66:25]
-  wire  IFBarrier_io_flush; // @[core.scala 66:25]
-  wire [31:0] IFBarrier_io_inInstr; // @[core.scala 66:25]
-  wire [31:0] IFBarrier_io_outInstr; // @[core.scala 66:25]
-  wire  IDstage_clock; // @[core.scala 68:25]
-  wire  IDstage_reset; // @[core.scala 68:25]
-  wire [31:0] IDstage_io_inst; // @[core.scala 68:25]
-  wire  IDstage_io_w_en; // @[core.scala 68:25]
-  wire [4:0] IDstage_io_rd_in; // @[core.scala 68:25]
-  wire [31:0] IDstage_io_write_data; // @[core.scala 68:25]
-  wire [4:0] IDstage_io_uop; // @[core.scala 68:25]
-  wire  IDstage_io_ALUsrc; // @[core.scala 68:25]
-  wire [31:0] IDstage_io_immExtnd; // @[core.scala 68:25]
-  wire  IDstage_io_XcptInvalid; // @[core.scala 68:25]
-  wire  IDstage_io_flush; // @[core.scala 68:25]
-  wire [4:0] IDstage_io_rd_out; // @[core.scala 68:25]
-  wire [31:0] IDstage_io_operandA; // @[core.scala 68:25]
-  wire [31:0] IDstage_io_operandB; // @[core.scala 68:25]
-  wire  IDBarrier_clock; // @[core.scala 69:25]
-  wire  IDBarrier_reset; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_inUOP; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_inRD; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_inOperandA; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_inOperandB; // @[core.scala 69:25]
-  wire  IDBarrier_io_inXcptInvalid; // @[core.scala 69:25]
-  wire  IDBarrier_io_inALUsrc; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_inImmExtnd; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_rs1_ID; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_rs2_ID; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_rs1_EX; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_rs2_EX; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_outUOP; // @[core.scala 69:25]
-  wire [4:0] IDBarrier_io_outRD; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_outOperandA; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_outOperandB; // @[core.scala 69:25]
-  wire  IDBarrier_io_outXcptInvalid; // @[core.scala 69:25]
-  wire  IDBarrier_io_outWrten; // @[core.scala 69:25]
-  wire  IDBarrier_io_outALUsrc; // @[core.scala 69:25]
-  wire [31:0] IDBarrier_io_outImmExtnd; // @[core.scala 69:25]
-  wire [31:0] EXstage_io_operandA; // @[core.scala 71:25]
-  wire [31:0] EXstage_io_operandB; // @[core.scala 71:25]
-  wire [31:0] EXstage_io_immExtnd; // @[core.scala 71:25]
-  wire  EXstage_io_ALUsrc; // @[core.scala 71:25]
-  wire [4:0] EXstage_io_rd_in; // @[core.scala 71:25]
-  wire [4:0] EXstage_io_uop; // @[core.scala 71:25]
-  wire  EXstage_io_wrten_in; // @[core.scala 71:25]
-  wire  EXstage_io_XcptInvalid; // @[core.scala 71:25]
-  wire [1:0] EXstage_io_forwardSelA; // @[core.scala 71:25]
-  wire [1:0] EXstage_io_forwardSelB; // @[core.scala 71:25]
-  wire [31:0] EXstage_io_aluResultWB; // @[core.scala 71:25]
-  wire [31:0] EXstage_io_aluResultMEM; // @[core.scala 71:25]
-  wire [31:0] EXstage_io_aluResult; // @[core.scala 71:25]
-  wire  EXstage_io_exception; // @[core.scala 71:25]
-  wire [4:0] EXstage_io_rd; // @[core.scala 71:25]
-  wire  EXstage_io_wrten; // @[core.scala 71:25]
-  wire  EXBarrier_clock; // @[core.scala 72:25]
-  wire  EXBarrier_reset; // @[core.scala 72:25]
-  wire [31:0] EXBarrier_io_inAluResult; // @[core.scala 72:25]
-  wire [4:0] EXBarrier_io_inRD; // @[core.scala 72:25]
-  wire  EXBarrier_io_inXcptInvalid; // @[core.scala 72:25]
-  wire  EXBarrier_io_inWrten; // @[core.scala 72:25]
-  wire [31:0] EXBarrier_io_outAluResult; // @[core.scala 72:25]
-  wire [4:0] EXBarrier_io_outRD; // @[core.scala 72:25]
-  wire  EXBarrier_io_outXcptInvalid; // @[core.scala 72:25]
-  wire  EXBarrier_io_outWrten; // @[core.scala 72:25]
-  wire  MEMBarrier_clock; // @[core.scala 75:26]
-  wire  MEMBarrier_reset; // @[core.scala 75:26]
-  wire [31:0] MEMBarrier_io_inAluResult; // @[core.scala 75:26]
-  wire [4:0] MEMBarrier_io_inRD; // @[core.scala 75:26]
-  wire  MEMBarrier_io_inXcptInvalid; // @[core.scala 75:26]
-  wire  MEMBarrier_io_inWrten; // @[core.scala 75:26]
-  wire [31:0] MEMBarrier_io_outAluResult; // @[core.scala 75:26]
-  wire [4:0] MEMBarrier_io_outRD; // @[core.scala 75:26]
-  wire  MEMBarrier_io_outXcptInvalid; // @[core.scala 75:26]
-  wire  MEMBarrier_io_outWrten; // @[core.scala 75:26]
-  wire [31:0] WBstage_io_aluResult; // @[core.scala 77:25]
-  wire [4:0] WBstage_io_rd; // @[core.scala 77:25]
-  wire  WBstage_io_wrten; // @[core.scala 77:25]
-  wire [4:0] WBstage_io_regFileReq_addr; // @[core.scala 77:25]
-  wire [31:0] WBstage_io_regFileReq_data; // @[core.scala 77:25]
-  wire  WBstage_io_regFileReq_w_en; // @[core.scala 77:25]
-  wire  WBBarrier_clock; // @[core.scala 78:25]
-  wire  WBBarrier_reset; // @[core.scala 78:25]
-  wire [31:0] WBBarrier_io_inCheckRes; // @[core.scala 78:25]
-  wire  WBBarrier_io_inXcptInvalid; // @[core.scala 78:25]
-  wire [31:0] WBBarrier_io_outCheckRes; // @[core.scala 78:25]
-  wire  WBBarrier_io_outXcptInvalid; // @[core.scala 78:25]
-  wire [31:0] ForwardingUnit_io_rs1_EX; // @[core.scala 80:30]
-  wire [31:0] ForwardingUnit_io_rs2_EX; // @[core.scala 80:30]
-  wire [31:0] ForwardingUnit_io_rd_MEM; // @[core.scala 80:30]
-  wire [31:0] ForwardingUnit_io_rd_WB; // @[core.scala 80:30]
-  wire  ForwardingUnit_io_wrEn_MEM; // @[core.scala 80:30]
-  wire  ForwardingUnit_io_wrEn_WB; // @[core.scala 80:30]
-  wire [1:0] ForwardingUnit_io_forwardA; // @[core.scala 80:30]
-  wire [1:0] ForwardingUnit_io_forwardB; // @[core.scala 80:30]
-  IF IFstage ( // @[core.scala 65:25]
+  wire  IFstage_clock; // @[core.scala 82:25]
+  wire  IFstage_reset; // @[core.scala 82:25]
+  wire  IFstage_io_PCSrcE; // @[core.scala 82:25]
+  wire [31:0] IFstage_io_PCTargetE; // @[core.scala 82:25]
+  wire [31:0] IFstage_io_InstrF; // @[core.scala 82:25]
+  wire [31:0] IFstage_io_PCF; // @[core.scala 82:25]
+  wire [31:0] IFstage_io_PCPlus4F; // @[core.scala 82:25]
+  wire  IFBarrier_clock; // @[core.scala 83:25]
+  wire  IFBarrier_reset; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_InstrF; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_PCF; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_PCPlus4F; // @[core.scala 83:25]
+  wire  IFBarrier_io_CLR; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_InstrD; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_PCD; // @[core.scala 83:25]
+  wire [31:0] IFBarrier_io_PCPlus4D; // @[core.scala 83:25]
+  wire  IDstage_clock; // @[core.scala 85:25]
+  wire  IDstage_reset; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_inst; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_pcD; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_pcPlus4D; // @[core.scala 85:25]
+  wire  IDstage_io_RegWriteW; // @[core.scala 85:25]
+  wire [4:0] IDstage_io_rdW; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_ResultW; // @[core.scala 85:25]
+  wire [4:0] IDstage_io_uop; // @[core.scala 85:25]
+  wire  IDstage_io_RegWriteD; // @[core.scala 85:25]
+  wire  IDstage_io_ALUSrcD; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_ImmExtD; // @[core.scala 85:25]
+  wire  IDstage_io_BranchD; // @[core.scala 85:25]
+  wire  IDstage_io_JumpD; // @[core.scala 85:25]
+  wire  IDstage_io_XcptInvalid; // @[core.scala 85:25]
+  wire [4:0] IDstage_io_rdD; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_RD1D; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_RD2D; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_pcD_out; // @[core.scala 85:25]
+  wire [31:0] IDstage_io_pcPlus4D_out; // @[core.scala 85:25]
+  wire  IDBarrier_clock; // @[core.scala 86:25]
+  wire  IDBarrier_reset; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_uopD; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_rdD; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_RD1D; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_RD2D; // @[core.scala 86:25]
+  wire  IDBarrier_io_XcptInvalidD; // @[core.scala 86:25]
+  wire  IDBarrier_io_RegWriteD; // @[core.scala 86:25]
+  wire  IDBarrier_io_ALUSrcD; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_ImmExtD; // @[core.scala 86:25]
+  wire  IDBarrier_io_BranchD; // @[core.scala 86:25]
+  wire  IDBarrier_io_JumpD; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_PCD; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_PCPlus4D; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_rs1D; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_rs2D; // @[core.scala 86:25]
+  wire  IDBarrier_io_CLR; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_Rs1E; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_Rs2E; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_uopE; // @[core.scala 86:25]
+  wire [4:0] IDBarrier_io_rdE; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_RD1E; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_RD2E; // @[core.scala 86:25]
+  wire  IDBarrier_io_XcptInvalidE; // @[core.scala 86:25]
+  wire  IDBarrier_io_RegWriteE; // @[core.scala 86:25]
+  wire  IDBarrier_io_ALUSrcE; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_ImmExtE; // @[core.scala 86:25]
+  wire  IDBarrier_io_BranchE; // @[core.scala 86:25]
+  wire  IDBarrier_io_JumpE; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_PCE; // @[core.scala 86:25]
+  wire [31:0] IDBarrier_io_PCPlus4E; // @[core.scala 86:25]
+  wire [31:0] EXstage_io_RD1E; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_RD2E; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_ImmExtE; // @[core.scala 88:25]
+  wire  EXstage_io_ALUSrcE; // @[core.scala 88:25]
+  wire [4:0] EXstage_io_rdE; // @[core.scala 88:25]
+  wire [4:0] EXstage_io_uopE; // @[core.scala 88:25]
+  wire  EXstage_io_RegWriteE; // @[core.scala 88:25]
+  wire  EXstage_io_XcptInvalidE; // @[core.scala 88:25]
+  wire [1:0] EXstage_io_ForwardAE; // @[core.scala 88:25]
+  wire [1:0] EXstage_io_ForwardBE; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_ResultW; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_ALUResultM; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_PCE; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_PCPlus4E; // @[core.scala 88:25]
+  wire  EXstage_io_BranchE; // @[core.scala 88:25]
+  wire  EXstage_io_JumpE; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_ALUResultE; // @[core.scala 88:25]
+  wire  EXstage_io_exceptionE; // @[core.scala 88:25]
+  wire [4:0] EXstage_io_rdOutE; // @[core.scala 88:25]
+  wire  EXstage_io_RegWriteOutE; // @[core.scala 88:25]
+  wire  EXstage_io_PCSrcE; // @[core.scala 88:25]
+  wire [31:0] EXstage_io_PCTargetE; // @[core.scala 88:25]
+  wire  EXBarrier_clock; // @[core.scala 89:25]
+  wire  EXBarrier_reset; // @[core.scala 89:25]
+  wire [31:0] EXBarrier_io_ALUResultE; // @[core.scala 89:25]
+  wire [4:0] EXBarrier_io_rdE; // @[core.scala 89:25]
+  wire  EXBarrier_io_XcptInvalidE; // @[core.scala 89:25]
+  wire  EXBarrier_io_RegWriteE; // @[core.scala 89:25]
+  wire [31:0] EXBarrier_io_ALUResultM; // @[core.scala 89:25]
+  wire [4:0] EXBarrier_io_rdM; // @[core.scala 89:25]
+  wire  EXBarrier_io_XcptInvalidM; // @[core.scala 89:25]
+  wire  EXBarrier_io_RegWriteM; // @[core.scala 89:25]
+  wire  MEMBarrier_clock; // @[core.scala 92:26]
+  wire  MEMBarrier_reset; // @[core.scala 92:26]
+  wire [31:0] MEMBarrier_io_ALUResultE; // @[core.scala 92:26]
+  wire [4:0] MEMBarrier_io_rdE; // @[core.scala 92:26]
+  wire  MEMBarrier_io_XcptInvalidE; // @[core.scala 92:26]
+  wire  MEMBarrier_io_RegWriteE; // @[core.scala 92:26]
+  wire [31:0] MEMBarrier_io_ALUResultM; // @[core.scala 92:26]
+  wire [4:0] MEMBarrier_io_rdM; // @[core.scala 92:26]
+  wire  MEMBarrier_io_XcptInvalidM; // @[core.scala 92:26]
+  wire  MEMBarrier_io_RegWriteM; // @[core.scala 92:26]
+  wire [31:0] WBstage_io_ALUResultW; // @[core.scala 94:25]
+  wire [4:0] WBstage_io_rdW; // @[core.scala 94:25]
+  wire  WBstage_io_RegWriteW; // @[core.scala 94:25]
+  wire [4:0] WBstage_io_RegWriteReq_addr; // @[core.scala 94:25]
+  wire [31:0] WBstage_io_RegWriteReq_data; // @[core.scala 94:25]
+  wire  WBstage_io_RegWriteReq_w_en; // @[core.scala 94:25]
+  wire [31:0] WBstage_io_ResultW; // @[core.scala 94:25]
+  wire  WBBarrier_clock; // @[core.scala 95:25]
+  wire  WBBarrier_reset; // @[core.scala 95:25]
+  wire [31:0] WBBarrier_io_ResultW; // @[core.scala 95:25]
+  wire  WBBarrier_io_XcptInvalidW; // @[core.scala 95:25]
+  wire [31:0] WBBarrier_io_check_res; // @[core.scala 95:25]
+  wire  WBBarrier_io_exception; // @[core.scala 95:25]
+  wire [31:0] ForwardingUnit_io_rs1_EX; // @[core.scala 97:30]
+  wire [31:0] ForwardingUnit_io_rs2_EX; // @[core.scala 97:30]
+  wire [31:0] ForwardingUnit_io_rd_MEM; // @[core.scala 97:30]
+  wire [31:0] ForwardingUnit_io_rd_WB; // @[core.scala 97:30]
+  wire  ForwardingUnit_io_wrEn_MEM; // @[core.scala 97:30]
+  wire  ForwardingUnit_io_wrEn_WB; // @[core.scala 97:30]
+  wire [1:0] ForwardingUnit_io_forwardA; // @[core.scala 97:30]
+  wire [1:0] ForwardingUnit_io_forwardB; // @[core.scala 97:30]
+  IF IFstage ( // @[core.scala 82:25]
     .clock(IFstage_clock),
     .reset(IFstage_reset),
-    .io_inst(IFstage_io_inst)
+    .io_PCSrcE(IFstage_io_PCSrcE),
+    .io_PCTargetE(IFstage_io_PCTargetE),
+    .io_InstrF(IFstage_io_InstrF),
+    .io_PCF(IFstage_io_PCF),
+    .io_PCPlus4F(IFstage_io_PCPlus4F)
   );
-  IFBarrier IFBarrier ( // @[core.scala 66:25]
+  IFBarrier IFBarrier ( // @[core.scala 83:25]
     .clock(IFBarrier_clock),
     .reset(IFBarrier_reset),
-    .io_flush(IFBarrier_io_flush),
-    .io_inInstr(IFBarrier_io_inInstr),
-    .io_outInstr(IFBarrier_io_outInstr)
+    .io_InstrF(IFBarrier_io_InstrF),
+    .io_PCF(IFBarrier_io_PCF),
+    .io_PCPlus4F(IFBarrier_io_PCPlus4F),
+    .io_CLR(IFBarrier_io_CLR),
+    .io_InstrD(IFBarrier_io_InstrD),
+    .io_PCD(IFBarrier_io_PCD),
+    .io_PCPlus4D(IFBarrier_io_PCPlus4D)
   );
-  ID IDstage ( // @[core.scala 68:25]
+  ID IDstage ( // @[core.scala 85:25]
     .clock(IDstage_clock),
     .reset(IDstage_reset),
     .io_inst(IDstage_io_inst),
-    .io_w_en(IDstage_io_w_en),
-    .io_rd_in(IDstage_io_rd_in),
-    .io_write_data(IDstage_io_write_data),
+    .io_pcD(IDstage_io_pcD),
+    .io_pcPlus4D(IDstage_io_pcPlus4D),
+    .io_RegWriteW(IDstage_io_RegWriteW),
+    .io_rdW(IDstage_io_rdW),
+    .io_ResultW(IDstage_io_ResultW),
     .io_uop(IDstage_io_uop),
-    .io_ALUsrc(IDstage_io_ALUsrc),
-    .io_immExtnd(IDstage_io_immExtnd),
+    .io_RegWriteD(IDstage_io_RegWriteD),
+    .io_ALUSrcD(IDstage_io_ALUSrcD),
+    .io_ImmExtD(IDstage_io_ImmExtD),
+    .io_BranchD(IDstage_io_BranchD),
+    .io_JumpD(IDstage_io_JumpD),
     .io_XcptInvalid(IDstage_io_XcptInvalid),
-    .io_flush(IDstage_io_flush),
-    .io_rd_out(IDstage_io_rd_out),
-    .io_operandA(IDstage_io_operandA),
-    .io_operandB(IDstage_io_operandB)
+    .io_rdD(IDstage_io_rdD),
+    .io_RD1D(IDstage_io_RD1D),
+    .io_RD2D(IDstage_io_RD2D),
+    .io_pcD_out(IDstage_io_pcD_out),
+    .io_pcPlus4D_out(IDstage_io_pcPlus4D_out)
   );
-  IDBarrier IDBarrier ( // @[core.scala 69:25]
+  IDBarrier IDBarrier ( // @[core.scala 86:25]
     .clock(IDBarrier_clock),
     .reset(IDBarrier_reset),
-    .io_inUOP(IDBarrier_io_inUOP),
-    .io_inRD(IDBarrier_io_inRD),
-    .io_inOperandA(IDBarrier_io_inOperandA),
-    .io_inOperandB(IDBarrier_io_inOperandB),
-    .io_inXcptInvalid(IDBarrier_io_inXcptInvalid),
-    .io_inALUsrc(IDBarrier_io_inALUsrc),
-    .io_inImmExtnd(IDBarrier_io_inImmExtnd),
-    .io_rs1_ID(IDBarrier_io_rs1_ID),
-    .io_rs2_ID(IDBarrier_io_rs2_ID),
-    .io_rs1_EX(IDBarrier_io_rs1_EX),
-    .io_rs2_EX(IDBarrier_io_rs2_EX),
-    .io_outUOP(IDBarrier_io_outUOP),
-    .io_outRD(IDBarrier_io_outRD),
-    .io_outOperandA(IDBarrier_io_outOperandA),
-    .io_outOperandB(IDBarrier_io_outOperandB),
-    .io_outXcptInvalid(IDBarrier_io_outXcptInvalid),
-    .io_outWrten(IDBarrier_io_outWrten),
-    .io_outALUsrc(IDBarrier_io_outALUsrc),
-    .io_outImmExtnd(IDBarrier_io_outImmExtnd)
+    .io_uopD(IDBarrier_io_uopD),
+    .io_rdD(IDBarrier_io_rdD),
+    .io_RD1D(IDBarrier_io_RD1D),
+    .io_RD2D(IDBarrier_io_RD2D),
+    .io_XcptInvalidD(IDBarrier_io_XcptInvalidD),
+    .io_RegWriteD(IDBarrier_io_RegWriteD),
+    .io_ALUSrcD(IDBarrier_io_ALUSrcD),
+    .io_ImmExtD(IDBarrier_io_ImmExtD),
+    .io_BranchD(IDBarrier_io_BranchD),
+    .io_JumpD(IDBarrier_io_JumpD),
+    .io_PCD(IDBarrier_io_PCD),
+    .io_PCPlus4D(IDBarrier_io_PCPlus4D),
+    .io_rs1D(IDBarrier_io_rs1D),
+    .io_rs2D(IDBarrier_io_rs2D),
+    .io_CLR(IDBarrier_io_CLR),
+    .io_Rs1E(IDBarrier_io_Rs1E),
+    .io_Rs2E(IDBarrier_io_Rs2E),
+    .io_uopE(IDBarrier_io_uopE),
+    .io_rdE(IDBarrier_io_rdE),
+    .io_RD1E(IDBarrier_io_RD1E),
+    .io_RD2E(IDBarrier_io_RD2E),
+    .io_XcptInvalidE(IDBarrier_io_XcptInvalidE),
+    .io_RegWriteE(IDBarrier_io_RegWriteE),
+    .io_ALUSrcE(IDBarrier_io_ALUSrcE),
+    .io_ImmExtE(IDBarrier_io_ImmExtE),
+    .io_BranchE(IDBarrier_io_BranchE),
+    .io_JumpE(IDBarrier_io_JumpE),
+    .io_PCE(IDBarrier_io_PCE),
+    .io_PCPlus4E(IDBarrier_io_PCPlus4E)
   );
-  EXstage EXstage ( // @[core.scala 71:25]
-    .io_operandA(EXstage_io_operandA),
-    .io_operandB(EXstage_io_operandB),
-    .io_immExtnd(EXstage_io_immExtnd),
-    .io_ALUsrc(EXstage_io_ALUsrc),
-    .io_rd_in(EXstage_io_rd_in),
-    .io_uop(EXstage_io_uop),
-    .io_wrten_in(EXstage_io_wrten_in),
-    .io_XcptInvalid(EXstage_io_XcptInvalid),
-    .io_forwardSelA(EXstage_io_forwardSelA),
-    .io_forwardSelB(EXstage_io_forwardSelB),
-    .io_aluResultWB(EXstage_io_aluResultWB),
-    .io_aluResultMEM(EXstage_io_aluResultMEM),
-    .io_aluResult(EXstage_io_aluResult),
-    .io_exception(EXstage_io_exception),
-    .io_rd(EXstage_io_rd),
-    .io_wrten(EXstage_io_wrten)
+  EXstage EXstage ( // @[core.scala 88:25]
+    .io_RD1E(EXstage_io_RD1E),
+    .io_RD2E(EXstage_io_RD2E),
+    .io_ImmExtE(EXstage_io_ImmExtE),
+    .io_ALUSrcE(EXstage_io_ALUSrcE),
+    .io_rdE(EXstage_io_rdE),
+    .io_uopE(EXstage_io_uopE),
+    .io_RegWriteE(EXstage_io_RegWriteE),
+    .io_XcptInvalidE(EXstage_io_XcptInvalidE),
+    .io_ForwardAE(EXstage_io_ForwardAE),
+    .io_ForwardBE(EXstage_io_ForwardBE),
+    .io_ResultW(EXstage_io_ResultW),
+    .io_ALUResultM(EXstage_io_ALUResultM),
+    .io_PCE(EXstage_io_PCE),
+    .io_PCPlus4E(EXstage_io_PCPlus4E),
+    .io_BranchE(EXstage_io_BranchE),
+    .io_JumpE(EXstage_io_JumpE),
+    .io_ALUResultE(EXstage_io_ALUResultE),
+    .io_exceptionE(EXstage_io_exceptionE),
+    .io_rdOutE(EXstage_io_rdOutE),
+    .io_RegWriteOutE(EXstage_io_RegWriteOutE),
+    .io_PCSrcE(EXstage_io_PCSrcE),
+    .io_PCTargetE(EXstage_io_PCTargetE)
   );
-  EXBarrier EXBarrier ( // @[core.scala 72:25]
+  EXBarrier EXBarrier ( // @[core.scala 89:25]
     .clock(EXBarrier_clock),
     .reset(EXBarrier_reset),
-    .io_inAluResult(EXBarrier_io_inAluResult),
-    .io_inRD(EXBarrier_io_inRD),
-    .io_inXcptInvalid(EXBarrier_io_inXcptInvalid),
-    .io_inWrten(EXBarrier_io_inWrten),
-    .io_outAluResult(EXBarrier_io_outAluResult),
-    .io_outRD(EXBarrier_io_outRD),
-    .io_outXcptInvalid(EXBarrier_io_outXcptInvalid),
-    .io_outWrten(EXBarrier_io_outWrten)
+    .io_ALUResultE(EXBarrier_io_ALUResultE),
+    .io_rdE(EXBarrier_io_rdE),
+    .io_XcptInvalidE(EXBarrier_io_XcptInvalidE),
+    .io_RegWriteE(EXBarrier_io_RegWriteE),
+    .io_ALUResultM(EXBarrier_io_ALUResultM),
+    .io_rdM(EXBarrier_io_rdM),
+    .io_XcptInvalidM(EXBarrier_io_XcptInvalidM),
+    .io_RegWriteM(EXBarrier_io_RegWriteM)
   );
-  EXBarrier MEMBarrier ( // @[core.scala 75:26]
+  EXBarrier MEMBarrier ( // @[core.scala 92:26]
     .clock(MEMBarrier_clock),
     .reset(MEMBarrier_reset),
-    .io_inAluResult(MEMBarrier_io_inAluResult),
-    .io_inRD(MEMBarrier_io_inRD),
-    .io_inXcptInvalid(MEMBarrier_io_inXcptInvalid),
-    .io_inWrten(MEMBarrier_io_inWrten),
-    .io_outAluResult(MEMBarrier_io_outAluResult),
-    .io_outRD(MEMBarrier_io_outRD),
-    .io_outXcptInvalid(MEMBarrier_io_outXcptInvalid),
-    .io_outWrten(MEMBarrier_io_outWrten)
+    .io_ALUResultE(MEMBarrier_io_ALUResultE),
+    .io_rdE(MEMBarrier_io_rdE),
+    .io_XcptInvalidE(MEMBarrier_io_XcptInvalidE),
+    .io_RegWriteE(MEMBarrier_io_RegWriteE),
+    .io_ALUResultM(MEMBarrier_io_ALUResultM),
+    .io_rdM(MEMBarrier_io_rdM),
+    .io_XcptInvalidM(MEMBarrier_io_XcptInvalidM),
+    .io_RegWriteM(MEMBarrier_io_RegWriteM)
   );
-  WBstage WBstage ( // @[core.scala 77:25]
-    .io_aluResult(WBstage_io_aluResult),
-    .io_rd(WBstage_io_rd),
-    .io_wrten(WBstage_io_wrten),
-    .io_regFileReq_addr(WBstage_io_regFileReq_addr),
-    .io_regFileReq_data(WBstage_io_regFileReq_data),
-    .io_regFileReq_w_en(WBstage_io_regFileReq_w_en)
+  WBstage WBstage ( // @[core.scala 94:25]
+    .io_ALUResultW(WBstage_io_ALUResultW),
+    .io_rdW(WBstage_io_rdW),
+    .io_RegWriteW(WBstage_io_RegWriteW),
+    .io_RegWriteReq_addr(WBstage_io_RegWriteReq_addr),
+    .io_RegWriteReq_data(WBstage_io_RegWriteReq_data),
+    .io_RegWriteReq_w_en(WBstage_io_RegWriteReq_w_en),
+    .io_ResultW(WBstage_io_ResultW)
   );
-  WBBarrier WBBarrier ( // @[core.scala 78:25]
+  WBBarrier WBBarrier ( // @[core.scala 95:25]
     .clock(WBBarrier_clock),
     .reset(WBBarrier_reset),
-    .io_inCheckRes(WBBarrier_io_inCheckRes),
-    .io_inXcptInvalid(WBBarrier_io_inXcptInvalid),
-    .io_outCheckRes(WBBarrier_io_outCheckRes),
-    .io_outXcptInvalid(WBBarrier_io_outXcptInvalid)
+    .io_ResultW(WBBarrier_io_ResultW),
+    .io_XcptInvalidW(WBBarrier_io_XcptInvalidW),
+    .io_check_res(WBBarrier_io_check_res),
+    .io_exception(WBBarrier_io_exception)
   );
-  ForwardingUnit ForwardingUnit ( // @[core.scala 80:30]
+  ForwardingUnit ForwardingUnit ( // @[core.scala 97:30]
     .io_rs1_EX(ForwardingUnit_io_rs1_EX),
     .io_rs2_EX(ForwardingUnit_io_rs2_EX),
     .io_rd_MEM(ForwardingUnit_io_rd_MEM),
@@ -1544,87 +1747,158 @@ module PipelinedRV32Icore(
     .io_forwardA(ForwardingUnit_io_forwardA),
     .io_forwardB(ForwardingUnit_io_forwardB)
   );
-  assign io_check_res = WBBarrier_io_outCheckRes; // @[core.scala 168:16]
-  assign io_exception = WBBarrier_io_outXcptInvalid; // @[core.scala 169:16]
+  assign io_check_res = WBBarrier_io_check_res; // @[core.scala 185:16]
+  assign io_exception = WBBarrier_io_exception; // @[core.scala 186:16]
+  assign io_PCdebug = IFstage_io_PCF; // @[core.scala 189:21]
+  assign io_InstrDdebug = IFBarrier_io_InstrD; // @[core.scala 190:21]
+  assign io_PCEdebug = IDBarrier_io_PCE; // @[core.scala 191:21]
+  assign io_RS1Edebug = IDBarrier_io_RD1E; // @[core.scala 192:21]
+  assign io_RS2Edebug = IDBarrier_io_RD2E; // @[core.scala 193:21]
+  assign io_BranchEdebug = IDBarrier_io_BranchE; // @[core.scala 194:21]
+  assign io_JumpEdebug = IDBarrier_io_JumpE; // @[core.scala 195:21]
+  assign io_PCSrcEdebug = EXstage_io_PCSrcE; // @[core.scala 196:21]
+  assign io_PCTargetEdebug = EXstage_io_PCTargetE; // @[core.scala 197:21]
+  assign io_RegWriteWdebug = MEMBarrier_io_RegWriteM; // @[core.scala 198:21]
+  assign io_rdWdebug = MEMBarrier_io_rdM; // @[core.scala 199:21]
   assign IFstage_clock = clock;
   assign IFstage_reset = reset;
+  assign IFstage_io_PCSrcE = EXstage_io_PCSrcE; // @[core.scala 100:24]
+  assign IFstage_io_PCTargetE = EXstage_io_PCTargetE; // @[core.scala 101:24]
   assign IFBarrier_clock = clock;
   assign IFBarrier_reset = reset;
-  assign IFBarrier_io_flush = IDstage_io_flush; // @[core.scala 90:27]
-  assign IFBarrier_io_inInstr = IFstage_io_inst; // @[core.scala 88:27]
+  assign IFBarrier_io_InstrF = IFstage_io_InstrF; // @[core.scala 104:25]
+  assign IFBarrier_io_PCF = IFstage_io_PCF; // @[core.scala 105:25]
+  assign IFBarrier_io_PCPlus4F = IFstage_io_PCPlus4F; // @[core.scala 106:25]
+  assign IFBarrier_io_CLR = EXstage_io_PCSrcE; // @[core.scala 107:25]
   assign IDstage_clock = clock;
   assign IDstage_reset = reset;
-  assign IDstage_io_inst = IFBarrier_io_outInstr; // @[core.scala 93:27]
-  assign IDstage_io_w_en = WBstage_io_regFileReq_w_en; // @[core.scala 94:27]
-  assign IDstage_io_rd_in = WBstage_io_regFileReq_addr; // @[core.scala 95:27]
-  assign IDstage_io_write_data = WBstage_io_regFileReq_data; // @[core.scala 96:27]
+  assign IDstage_io_inst = IFBarrier_io_InstrD; // @[core.scala 110:26]
+  assign IDstage_io_pcD = IFBarrier_io_PCD; // @[core.scala 111:26]
+  assign IDstage_io_pcPlus4D = IFBarrier_io_PCPlus4D; // @[core.scala 112:26]
+  assign IDstage_io_RegWriteW = WBstage_io_RegWriteReq_w_en; // @[core.scala 113:26]
+  assign IDstage_io_rdW = WBstage_io_RegWriteReq_addr; // @[core.scala 114:26]
+  assign IDstage_io_ResultW = WBstage_io_RegWriteReq_data; // @[core.scala 115:26]
   assign IDBarrier_clock = clock;
   assign IDBarrier_reset = reset;
-  assign IDBarrier_io_inUOP = IDstage_io_uop; // @[core.scala 100:33]
-  assign IDBarrier_io_inRD = IDstage_io_rd_out; // @[core.scala 101:33]
-  assign IDBarrier_io_inOperandA = IDstage_io_operandA; // @[core.scala 103:33]
-  assign IDBarrier_io_inOperandB = IDstage_io_operandB; // @[core.scala 104:33]
-  assign IDBarrier_io_inXcptInvalid = IDstage_io_XcptInvalid; // @[core.scala 102:33]
-  assign IDBarrier_io_inALUsrc = IDstage_io_ALUsrc; // @[core.scala 106:33]
-  assign IDBarrier_io_inImmExtnd = IDstage_io_immExtnd; // @[core.scala 107:33]
-  assign IDBarrier_io_rs1_ID = IDstage_io_inst[19:15]; // @[core.scala 165:41]
-  assign IDBarrier_io_rs2_ID = IDstage_io_inst[24:20]; // @[core.scala 166:41]
-  assign EXstage_io_operandA = IDBarrier_io_outOperandA; // @[core.scala 114:27]
-  assign EXstage_io_operandB = IDBarrier_io_outOperandB; // @[core.scala 115:27]
-  assign EXstage_io_immExtnd = IDBarrier_io_outImmExtnd; // @[core.scala 119:27]
-  assign EXstage_io_ALUsrc = IDBarrier_io_outALUsrc; // @[core.scala 118:27]
-  assign EXstage_io_rd_in = IDBarrier_io_outRD; // @[core.scala 113:27]
-  assign EXstage_io_uop = IDBarrier_io_outUOP; // @[core.scala 112:27]
-  assign EXstage_io_wrten_in = IDBarrier_io_outWrten; // @[core.scala 117:27]
-  assign EXstage_io_XcptInvalid = IDBarrier_io_outXcptInvalid; // @[core.scala 116:27]
-  assign EXstage_io_forwardSelA = ForwardingUnit_io_forwardA; // @[core.scala 160:26]
-  assign EXstage_io_forwardSelB = ForwardingUnit_io_forwardB; // @[core.scala 161:26]
-  assign EXstage_io_aluResultWB = MEMBarrier_io_outAluResult; // @[core.scala 163:27]
-  assign EXstage_io_aluResultMEM = EXBarrier_io_outAluResult; // @[core.scala 162:27]
+  assign IDBarrier_io_uopD = IDstage_io_uop; // @[core.scala 118:29]
+  assign IDBarrier_io_rdD = IDstage_io_rdD; // @[core.scala 119:29]
+  assign IDBarrier_io_RD1D = IDstage_io_RD1D; // @[core.scala 120:29]
+  assign IDBarrier_io_RD2D = IDstage_io_RD2D; // @[core.scala 121:29]
+  assign IDBarrier_io_XcptInvalidD = IDstage_io_XcptInvalid; // @[core.scala 122:29]
+  assign IDBarrier_io_RegWriteD = IDstage_io_RegWriteD; // @[core.scala 123:29]
+  assign IDBarrier_io_ALUSrcD = IDstage_io_ALUSrcD; // @[core.scala 124:29]
+  assign IDBarrier_io_ImmExtD = IDstage_io_ImmExtD; // @[core.scala 125:29]
+  assign IDBarrier_io_BranchD = IDstage_io_BranchD; // @[core.scala 126:29]
+  assign IDBarrier_io_JumpD = IDstage_io_JumpD; // @[core.scala 127:29]
+  assign IDBarrier_io_PCD = IDstage_io_pcD_out; // @[core.scala 128:29]
+  assign IDBarrier_io_PCPlus4D = IDstage_io_pcPlus4D_out; // @[core.scala 129:29]
+  assign IDBarrier_io_rs1D = IFBarrier_io_InstrD[19:15]; // @[core.scala 130:51]
+  assign IDBarrier_io_rs2D = IFBarrier_io_InstrD[24:20]; // @[core.scala 131:51]
+  assign IDBarrier_io_CLR = EXstage_io_PCSrcE; // @[core.scala 132:29]
+  assign EXstage_io_RD1E = IDBarrier_io_RD1E; // @[core.scala 135:27]
+  assign EXstage_io_RD2E = IDBarrier_io_RD2E; // @[core.scala 136:27]
+  assign EXstage_io_ImmExtE = IDBarrier_io_ImmExtE; // @[core.scala 137:27]
+  assign EXstage_io_ALUSrcE = IDBarrier_io_ALUSrcE; // @[core.scala 138:27]
+  assign EXstage_io_rdE = IDBarrier_io_rdE; // @[core.scala 139:27]
+  assign EXstage_io_uopE = IDBarrier_io_uopE; // @[core.scala 140:27]
+  assign EXstage_io_RegWriteE = IDBarrier_io_RegWriteE; // @[core.scala 141:27]
+  assign EXstage_io_XcptInvalidE = IDBarrier_io_XcptInvalidE; // @[core.scala 142:27]
+  assign EXstage_io_ForwardAE = ForwardingUnit_io_forwardA; // @[core.scala 179:25]
+  assign EXstage_io_ForwardBE = ForwardingUnit_io_forwardB; // @[core.scala 180:25]
+  assign EXstage_io_ResultW = WBstage_io_ResultW; // @[core.scala 182:25]
+  assign EXstage_io_ALUResultM = EXBarrier_io_ALUResultM; // @[core.scala 181:25]
+  assign EXstage_io_PCE = IDBarrier_io_PCE; // @[core.scala 143:27]
+  assign EXstage_io_PCPlus4E = IDBarrier_io_PCPlus4E; // @[core.scala 144:27]
+  assign EXstage_io_BranchE = IDBarrier_io_BranchE; // @[core.scala 145:27]
+  assign EXstage_io_JumpE = IDBarrier_io_JumpE; // @[core.scala 146:27]
   assign EXBarrier_clock = clock;
   assign EXBarrier_reset = reset;
-  assign EXBarrier_io_inAluResult = EXstage_io_aluResult; // @[core.scala 124:31]
-  assign EXBarrier_io_inRD = EXstage_io_rd; // @[core.scala 125:31]
-  assign EXBarrier_io_inXcptInvalid = EXstage_io_exception; // @[core.scala 126:31]
-  assign EXBarrier_io_inWrten = EXstage_io_wrten; // @[core.scala 127:31]
+  assign EXBarrier_io_ALUResultE = EXstage_io_ALUResultE; // @[core.scala 149:29]
+  assign EXBarrier_io_rdE = EXstage_io_rdOutE; // @[core.scala 150:29]
+  assign EXBarrier_io_XcptInvalidE = EXstage_io_exceptionE; // @[core.scala 151:29]
+  assign EXBarrier_io_RegWriteE = EXstage_io_RegWriteOutE; // @[core.scala 152:29]
   assign MEMBarrier_clock = clock;
   assign MEMBarrier_reset = reset;
-  assign MEMBarrier_io_inAluResult = EXBarrier_io_outAluResult; // @[core.scala 132:29]
-  assign MEMBarrier_io_inRD = EXBarrier_io_outRD; // @[core.scala 133:29]
-  assign MEMBarrier_io_inXcptInvalid = EXBarrier_io_outXcptInvalid; // @[core.scala 134:29]
-  assign MEMBarrier_io_inWrten = EXBarrier_io_outWrten; // @[core.scala 135:29]
-  assign WBstage_io_aluResult = MEMBarrier_io_outAluResult; // @[core.scala 140:24]
-  assign WBstage_io_rd = MEMBarrier_io_outRD; // @[core.scala 142:24]
-  assign WBstage_io_wrten = MEMBarrier_io_outWrten; // @[core.scala 143:24]
+  assign MEMBarrier_io_ALUResultE = EXBarrier_io_ALUResultM; // @[core.scala 155:30]
+  assign MEMBarrier_io_rdE = EXBarrier_io_rdM; // @[core.scala 156:30]
+  assign MEMBarrier_io_XcptInvalidE = EXBarrier_io_XcptInvalidM; // @[core.scala 157:30]
+  assign MEMBarrier_io_RegWriteE = EXBarrier_io_RegWriteM; // @[core.scala 158:30]
+  assign WBstage_io_ALUResultW = MEMBarrier_io_ALUResultM; // @[core.scala 161:25]
+  assign WBstage_io_rdW = MEMBarrier_io_rdM; // @[core.scala 162:25]
+  assign WBstage_io_RegWriteW = MEMBarrier_io_RegWriteM; // @[core.scala 163:25]
   assign WBBarrier_clock = clock;
   assign WBBarrier_reset = reset;
-  assign WBBarrier_io_inCheckRes = WBstage_io_aluResult; // @[core.scala 147:31]
-  assign WBBarrier_io_inXcptInvalid = MEMBarrier_io_outXcptInvalid; // @[core.scala 148:31]
-  assign ForwardingUnit_io_rs1_EX = {{27'd0}, IDBarrier_io_rs1_EX}; // @[core.scala 151:30]
-  assign ForwardingUnit_io_rs2_EX = {{27'd0}, IDBarrier_io_rs2_EX}; // @[core.scala 152:30]
-  assign ForwardingUnit_io_rd_MEM = {{27'd0}, EXBarrier_io_outRD}; // @[core.scala 154:30]
-  assign ForwardingUnit_io_rd_WB = {{27'd0}, MEMBarrier_io_outRD}; // @[core.scala 157:30]
-  assign ForwardingUnit_io_wrEn_MEM = EXBarrier_io_outWrten; // @[core.scala 155:30]
-  assign ForwardingUnit_io_wrEn_WB = MEMBarrier_io_outWrten; // @[core.scala 158:30]
+  assign WBBarrier_io_ResultW = WBstage_io_ResultW; // @[core.scala 166:29]
+  assign WBBarrier_io_XcptInvalidW = MEMBarrier_io_XcptInvalidM; // @[core.scala 167:29]
+  assign ForwardingUnit_io_rs1_EX = {{27'd0}, IDBarrier_io_Rs1E}; // @[core.scala 170:30]
+  assign ForwardingUnit_io_rs2_EX = {{27'd0}, IDBarrier_io_Rs2E}; // @[core.scala 171:30]
+  assign ForwardingUnit_io_rd_MEM = {{27'd0}, EXBarrier_io_rdM}; // @[core.scala 173:30]
+  assign ForwardingUnit_io_rd_WB = {{27'd0}, MEMBarrier_io_rdM}; // @[core.scala 176:30]
+  assign ForwardingUnit_io_wrEn_MEM = EXBarrier_io_RegWriteM; // @[core.scala 174:30]
+  assign ForwardingUnit_io_wrEn_WB = MEMBarrier_io_RegWriteM; // @[core.scala 177:30]
 endmodule
 module PipelinedRV32I(
   input         clock,
   input         reset,
   output [31:0] io_result,
-  output        io_exception
+  output        io_exception,
+  output [31:0] io_PCdebug,
+  output [31:0] io_InstrDdebug,
+  output [31:0] io_PCEdebug,
+  output [31:0] io_RS1Edebug,
+  output [31:0] io_RS2Edebug,
+  output        io_BranchEdebug,
+  output        io_JumpEdebug,
+  output        io_PCSrcEdebug,
+  output [31:0] io_PCTargetEdebug,
+  output        io_RegWriteWdebug,
+  output [4:0]  io_rdWdebug
 );
-  wire  core_clock; // @[PipelinedRISCV32I.scala 25:20]
-  wire  core_reset; // @[PipelinedRISCV32I.scala 25:20]
-  wire [31:0] core_io_check_res; // @[PipelinedRISCV32I.scala 25:20]
-  wire  core_io_exception; // @[PipelinedRISCV32I.scala 25:20]
-  PipelinedRV32Icore core ( // @[PipelinedRISCV32I.scala 25:20]
+  wire  core_clock; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_reset; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_check_res; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_io_exception; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_PCdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_InstrDdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_PCEdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_RS1Edebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_RS2Edebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_io_BranchEdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_io_JumpEdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_io_PCSrcEdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [31:0] core_io_PCTargetEdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire  core_io_RegWriteWdebug; // @[PipelinedRISCV32I.scala 36:20]
+  wire [4:0] core_io_rdWdebug; // @[PipelinedRISCV32I.scala 36:20]
+  PipelinedRV32Icore core ( // @[PipelinedRISCV32I.scala 36:20]
     .clock(core_clock),
     .reset(core_reset),
     .io_check_res(core_io_check_res),
-    .io_exception(core_io_exception)
+    .io_exception(core_io_exception),
+    .io_PCdebug(core_io_PCdebug),
+    .io_InstrDdebug(core_io_InstrDdebug),
+    .io_PCEdebug(core_io_PCEdebug),
+    .io_RS1Edebug(core_io_RS1Edebug),
+    .io_RS2Edebug(core_io_RS2Edebug),
+    .io_BranchEdebug(core_io_BranchEdebug),
+    .io_JumpEdebug(core_io_JumpEdebug),
+    .io_PCSrcEdebug(core_io_PCSrcEdebug),
+    .io_PCTargetEdebug(core_io_PCTargetEdebug),
+    .io_RegWriteWdebug(core_io_RegWriteWdebug),
+    .io_rdWdebug(core_io_rdWdebug)
   );
-  assign io_result = core_io_check_res; // @[PipelinedRISCV32I.scala 27:16]
-  assign io_exception = core_io_exception; // @[PipelinedRISCV32I.scala 28:16]
+  assign io_result = core_io_check_res; // @[PipelinedRISCV32I.scala 38:21]
+  assign io_exception = core_io_exception; // @[PipelinedRISCV32I.scala 39:21]
+  assign io_PCdebug = core_io_PCdebug; // @[PipelinedRISCV32I.scala 40:21]
+  assign io_InstrDdebug = core_io_InstrDdebug; // @[PipelinedRISCV32I.scala 41:21]
+  assign io_PCEdebug = core_io_PCEdebug; // @[PipelinedRISCV32I.scala 42:21]
+  assign io_RS1Edebug = core_io_RS1Edebug; // @[PipelinedRISCV32I.scala 43:21]
+  assign io_RS2Edebug = core_io_RS2Edebug; // @[PipelinedRISCV32I.scala 44:21]
+  assign io_BranchEdebug = core_io_BranchEdebug; // @[PipelinedRISCV32I.scala 45:21]
+  assign io_JumpEdebug = core_io_JumpEdebug; // @[PipelinedRISCV32I.scala 46:21]
+  assign io_PCSrcEdebug = core_io_PCSrcEdebug; // @[PipelinedRISCV32I.scala 47:21]
+  assign io_PCTargetEdebug = core_io_PCTargetEdebug; // @[PipelinedRISCV32I.scala 48:21]
+  assign io_RegWriteWdebug = core_io_RegWriteWdebug; // @[PipelinedRISCV32I.scala 49:21]
+  assign io_rdWdebug = core_io_rdWdebug; // @[PipelinedRISCV32I.scala 50:21]
   assign core_clock = clock;
   assign core_reset = reset;
 endmodule

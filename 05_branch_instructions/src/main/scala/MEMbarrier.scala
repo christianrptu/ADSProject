@@ -36,39 +36,29 @@ import chisel3._
 
 class MEMBarrier extends Module{
     val io = IO(new Bundle {
-        val inALUResult     = Input(UInt(32.W))
-        val inRD            = Input(UInt(5.W))
-        val inException     = Input(UInt(1.W))
-        val inWrten         = Input(Bool())
-        val inJ             = Input(Bool())
-        val inPC4           = Input(UInt(32.W))
+        val ALUResultM   = Input(UInt(32.W))
+        val rdM          = Input(UInt(5.W))
+        val XcptInvalidM = Input(Bool())
+        val RegWriteM    = Input(Bool())
 
-        val outALUResult    = Output(UInt(32.W))
-        val outRD           = Output(UInt(5.W))
-        val outException    = Output(UInt(1.W))
-        val outWrten        = Output(Bool())
-        val outJ            = Output(Bool())
-        val outPC4          = Output(UInt(32.W))
+        val ALUResultW   = Output(UInt(32.W))
+        val rdW          = Output(UInt(5.W))
+        val XcptInvalidW = Output(Bool())
+        val RegWriteW    = Output(Bool())
     })
 
-    val aluResult = RegInit(0.U(32.W))
-    val rd        = RegInit(0.U(5.W))
-    val exception = RegInit(0.U(1.W))
-    val wrten     = RegInit(false.B)
-    val j         = RegInit(false.B)
-    val PC4       = RegInit(0.U(32.W))
+    val ALUResult   = RegInit(0.U(32.W))
+    val rd          = RegInit(0.U(5.W))
+    val XcptInvalid = RegInit(false.B)
+    val RegWrite    = RegInit(false.B)
 
-    aluResult       := io.inALUResult
-    rd              := io.inRD
-    exception       := io.inException
-    wrten           := io.inWrten
-    j               := io.inJ
-    PC4             := io.inPC4
+    ALUResult   := io.ALUResultM
+    rd          := io.rdM
+    XcptInvalid := io.XcptInvalidM
+    RegWrite    := io.RegWriteM
 
-    io.outALUResult := aluResult
-    io.outRD        := rd
-    io.outException := exception
-    io.outWrten     := wrten
-    io.outJ         := j
-    io.outPC4       := PC4
+    io.ALUResultW   := ALUResult
+    io.rdW          := rd
+    io.XcptInvalidW := XcptInvalid
+    io.RegWriteW    := RegWrite
 }

@@ -11,169 +11,114 @@ import chiseltest._
 import PipelinedRV32I._
 import org.scalatest.flatspec.AnyFlatSpec
 
-class PipelinedRISCV32ITest extends AnyFlatSpec with ChiselScalatestTester {
+class BranchJumpTest extends AnyFlatSpec with ChiselScalatestTester {
 
-"RV32I_BasicTester" should "work" in {
+  "BranchJump_Tester" should "work" in {
     test(new PipelinedRV32I("src/test/programs/BinaryFile_pipelined")).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
 
       dut.clock.setTimeout(0)
+
+      def dump(label: String): Unit = {
+        println(f"$label%-10s " +
+          f"PCF=0x${dut.io.PCdebug.peek().litValue}%03X  " +
+          f"InstrD=0x${dut.io.InstrDdebug.peek().litValue}%08X  " +
+          f"PCE=0x${dut.io.PCEdebug.peek().litValue}%03X  " +
+          f"BranchE=${dut.io.BranchEdebug.peek().litToBoolean}  " +
+          f"JumpE=${dut.io.JumpEdebug.peek().litToBoolean}  " +
+          f"PCSrcE=${dut.io.PCSrcEdebug.peek().litToBoolean}  " +
+          f"PCTargetE=0x${dut.io.PCTargetEdebug.peek().litValue}%03X  " +
+          f"check_res=${dut.io.result.peek().litValue}%-6d " +
+          f"RegWriteW=${dut.io.RegWriteWdebug.peek().litToBoolean}  " +
+          f"rdW=${dut.io.rdWdebug.peek().litValue}")
+      }
+
+      // --- setup (idx0-5), same cadence as your proven working test ---
       dut.clock.step(5)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
+      dut.io.result.expect(5.U)   // idx0: addi x1,x0,5
       dut.clock.step(1)
-      dut.io.result.expect(4.U)     // ADDI x1, x0, 4
-      dut.io.exception.expect(false.B)
+      dut.io.result.expect(5.U)   // idx1: addi x2,x0,5
       dut.clock.step(1)
-      dut.io.result.expect(5.U)     // ADDI x2, x0, 5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(9.U)     // ADD x3, x1, x2
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(2047.U)  // ADDI x4, x0, 2047
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(16.U)    // ADDI x5, x0, 16
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(2031.U)  // SUB x6, x4, x5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(2022.U)  // XOR x7, x6, x3
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(2047.U)  // OR x8, x6, x5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // AND x9, x6, x5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // ADDI x0, x0, 0
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(64704.U) // SLL x10, x7, x2
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(63.U)    // SRL x11, x7, x2
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(63.U)    // SRA x12, x7, x2
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // SLT x13, x4, x4
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // SLT x13, x4, x5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(1.U)     // SLT x13, x5, x4
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // SLTU x13, x4, x4
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(0.U)     // SLTU x13, x4, x5
-      dut.io.exception.expect(false.B)
-      dut.clock.step(1)
-      dut.io.result.expect(1.U)     // SLTU x13, x5, x4
-      dut.io.exception.expect(false.B)
+      dut.io.result.expect(10.U)  // idx2: addi x3,x0,10
+      dut.clock.step(1); dut.clock.step(1); dut.clock.step(1) // 3 nops
 
-      //OUR TEST CASES
-      dut.clock.step(1)
-      dut.io.result.expect(0xFFFFFFFDL.U)     // ADDI x14, x0, -3
-      dut.io.exception.expect(false.B)
+      // === TEST 1: BEQ taken ===
+      println("=== TEST 1: BEQ x1,x2 (taken, 5==5) ===")
+      dump("branch")
+      dut.io.result.expect(0.U)   // branch itself never writes, aluResult unused=0
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
+      // watch for: check_res=401 should NEVER appear (squashed)
+      //            check_res=402 should appear exactly once (landing, idx8)
 
-      //HAZARD RAW: x14 DOES NOT HOLD YET THE VALUE, IT IS STILL ZERO
-      //x15 = 0 + 4 EXPECTED
-      dut.clock.step(1)
-      dut.io.result.expect(1.U)               // ADDI x15, x14, 4
-      dut.io.exception.expect(false.B)
-      println(f"RAW HAZARD [ADDI x15, x14, 4]: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 2: BEQ not taken ===
+      println("=== TEST 2: BEQ x1,x3 (not taken, 5!=10) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
+      // expect check_res=403 then 404, both appear, no bubbles/skip
 
-      dut.io.result.expect(144.U)               //x3 = 9, SLLI x3, x3, 4
-      dut.io.exception.expect(false.B)
-      println(f"x3 = 9, SLLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(5) //ADDED NOPs TO LET x3 GET TO THE REGISTERS, WHICH IS USED IN THE NEXT OPERATION
+      // === TEST 3: BNE taken ===
+      println("=== TEST 3: BNE x1,x3 (taken) ===")
+      dump("branch")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
+      // 405 must NOT appear, 406 must appear (landing)
 
-      dut.io.result.expect(18.U)               //x3 = 288, SRAI x3, x3, 3
-      dut.io.exception.expect(false.B)
-      println(f"x3 = 288, SRAI x3, x3, 3: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(5) //ADDED NOPs TO LET x3 GET TO THE REGISTERS, WHICH IS USED IN THE NEXT OPERATION
+      // === TEST 4: BNE not taken ===
+      println("=== TEST 4: BNE x1,x2 (not taken) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0xFFFFFF88L.U)               //x3 = -120, ADDI x3, x3, -138
-      dut.io.exception.expect(false.B)
-      println(f"x3 = -120, ADDI x3, x3, -138: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(5) //ADDED NOPs TO LET x3 GET TO THE REGISTERS, WHICH IS USED IN THE NEXT OPERATION
+      // === TEST 5: BLT taken (signed, forwarded operands) ===
+      println("=== TEST 5: BLT x12,x13 (taken, -5<3, forwarded) ===")
+      dump("branch")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0xFFFFFFF1L.U)               //x3 = -15, SRAI x3, x3, 3
-      dut.io.exception.expect(false.B)
-      println(f"x3 = -15, SRAI x3, x3, 3: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(5)
+      // === TEST 6: BLT not taken ===
+      println("=== TEST 6: BLT x13,x12 (not taken) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
 
-      //TESTING FORWARDING UNIT
+      // === TEST 7: BGE taken ===
+      println("=== TEST 7: BGE x13,x12 (taken) ===")
+      dump("branch")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0x0FFFFFFFL.U)               //x3 = 0x0FFFFFFF, SRLI, x3, x3, 4
-      dut.io.exception.expect(false.B)
-      println(f"x3 = 0x0FFFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 8: BGE not taken ===
+      println("=== TEST 8: BGE x12,x13 (not taken) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0x00FFFFFFL.U)               //x3 = 0x00FFFFFF, SRLI, x3, x3, 4
-      dut.io.exception.expect(false.B)
-      println(f"x3 = 0x00FFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 9: BLTU taken (unsigned, forwarded) ===
+      println("=== TEST 9: BLTU x22,x23 (taken, 1 <u huge) ===")
+      dump("branch")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0.U)                         //x4 = 0, ADDI x4, x0, 0
-      dut.io.exception.expect(false.B)
-      println(f"x4 = 0, ADDI x4, x0, 0: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 10: BLTU not taken ===
+      println("=== TEST 10: BLTU x23,x22 (not taken) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(0x000FFFFFL.U)               //x3 = 0x000FFFFF, SRLI, x3, x3, 4
-      dut.io.exception.expect(false.B)
-      println(f"x3 = 0x00FFFFFF, SRLI x3, x3, 4: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 11: BGEU taken ===
+      println("=== TEST 11: BGEU x23,x22 (taken) ===")
+      dump("branch")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(1.U)                         //x4 = 0, ADDI x4, x4, 1
-      dut.io.exception.expect(false.B)
-      println(f"x4 = 1, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 12: BGEU not taken ===
+      println("=== TEST 12: BGEU x22,x23 (not taken) ===")
+      dump("branch")
+      for (i <- 1 to 4) { dut.clock.step(1); dump(s"+$i") }
 
-      dut.io.result.expect(2.U)                         //x4 = 0, ADDI x4, x4, 1
-      dut.io.exception.expect(false.B)
-      println(f"x4 = 2, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 13: JAL ===
+      println("=== TEST 13: JAL x1,8 (x1 should = pc+4 = 188) ===")
+      dump("jal")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
+      // expect: check_res=188 for the JAL instruction itself (RegWriteW=true, rdW=1)
+      // 425 must NOT appear, 426 must appear
 
-      dut.io.result.expect(3.U)                         //x4 = 0, ADDI x4, x4, 1
-      dut.io.exception.expect(false.B)
-      println(f"x4 = 3, ADDI x4, x4, 1: 0x${dut.io.result.peek().litValue}%08X")
-      dut.clock.step(1)
+      // === TEST 14: JALR ===
+      println("=== TEST 14: JALR x7,204(x0) (x7 should = pc+4 = 200) ===")
+      dump("jalr")
+      for (i <- 1 to 6) { dut.clock.step(1); dump(s"+$i") }
+      // expect: check_res=200 for the JALR instruction itself (RegWriteW=true, rdW=7)
+      // 427 must NOT appear, 428 must appear
     }
   }
 }
