@@ -56,7 +56,7 @@ class ControlUnit extends Module {
         val immSel      = Output(UInt(2.W))   // 00: full, 01: shamt, 10: jump, 11: branch
         val BranchD     = Output(Bool())
         val JumpD       = Output(Bool())
-        val RegWriteD   = Output(Bool())
+        val WriteEnableD= Output(Bool())
         val XcptInvalid = Output(Bool())
     })
 
@@ -71,12 +71,12 @@ class ControlUnit extends Module {
     io.immSel      := 0.U
     io.BranchD     := false.B
     io.JumpD       := false.B
-    io.RegWriteD   := false.B
+    io.WriteEnableD:= false.B
     io.XcptInvalid := true.B
 
     switch(io.opcode){
         is(OPC_R){
-            io.RegWriteD := true.B
+            io.WriteEnableD := true.B
             when(io.funct7 === "b0000000".U){
                 switch(io.funct3){
                     is("b000".U){ io.uop := uopc.ADD;  io.XcptInvalid := false.B }
@@ -97,7 +97,7 @@ class ControlUnit extends Module {
         }
         is(OPC_I){
             io.ALUSrcD   := true.B
-            io.RegWriteD := true.B
+            io.WriteEnableD := true.B
             switch(io.funct3){
                 is("b000".U){ io.uop := uopc.ADDI;  io.XcptInvalid := false.B }
                 is("b010".U){ io.uop := uopc.SLTI;  io.XcptInvalid := false.B }
@@ -122,7 +122,7 @@ class ControlUnit extends Module {
         is(OPC_B){
             io.immSel  := 3.U   // B-Type imm calculation
             io.BranchD := true.B
-            // RegWriteD stays false: B-type has no rd field, inst[11:7] is imm bits
+            // WriteEnableD stays false: B-type has no rd field, inst[11:7] is imm bits
             switch(io.funct3){
                 is("b000".U){ io.uop := uopc.BEQ;  io.XcptInvalid := false.B }
                 is("b001".U){ io.uop := uopc.BNE;  io.XcptInvalid := false.B }
@@ -135,16 +135,17 @@ class ControlUnit extends Module {
         is(OPC_JAL){
             io.immSel      := 2.U   // J-Type imm calculation
             io.JumpD       := true.B
-            io.RegWriteD   := true.B  // writes pc+4 to rd
+            io.WriteEnableD   := true.B  // writes pc+4 to rd
             io.uop         := uopc.JAL
             io.XcptInvalid := false.B
         }
         is(OPC_JALR){
             // immSel stays default (0.U) -> JALR is I-Type encoded
+            io.immSel      := 0.U
             io.ALUSrcD     := true.B
             io.JumpD       := true.B
             io.BranchD     := true.B
-            io.RegWriteD   := true.B  // writes pc+4 to rd
+            io.WriteEnableD:= true.B  // writes pc+4 to rd
             io.uop         := uopc.JALR
             io.XcptInvalid := false.B
         }
@@ -179,12 +180,12 @@ class ID extends Module{
         val inst           = Input(UInt(32.W))
         val pcD            = Input(UInt(32.W))
         val pcPlus4D       = Input(UInt(32.W))
-        val RegWriteW      = Input(Bool())      // write enable for the instruction currently in WB
+        val WriteEnableW      = Input(Bool())      // write enable for the instruction currently in WB
         val rdW            = Input(UInt(5.W))
         val ResultW        = Input(UInt(32.W))
 
         val uop           = Output(uopc())
-        val RegWriteD     = Output(Bool())
+        val WriteEnableD     = Output(Bool())
         val ALUSrcD       = Output(Bool())
         val ImmExtD       = Output(UInt(32.W))
         val BranchD       = Output(Bool())
@@ -219,7 +220,7 @@ class ID extends Module{
     rf.io.req_1.addr := rs1
     rf.io.req_2.addr := rs2
     rf.io.req_3.addr := io.rdW
-    rf.io.req_3.w_en := io.RegWriteW
+    rf.io.req_3.w_en := io.WriteEnableW
     rf.io.req_3.data := io.ResultW
 
     io.RD1D        := rf.io.resp_1.data
@@ -228,7 +229,7 @@ class ID extends Module{
     io.uop         := cu.io.uop
     io.XcptInvalid := cu.io.XcptInvalid
     io.ImmExtD     := sigex.io.imm_out
-    io.RegWriteD   := cu.io.RegWriteD
+    io.WriteEnableD   := cu.io.WriteEnableD
     io.ALUSrcD     := cu.io.ALUSrcD
     io.BranchD     := cu.io.BranchD
     io.JumpD       := cu.io.JumpD

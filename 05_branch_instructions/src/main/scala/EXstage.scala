@@ -75,7 +75,7 @@ class EXstage extends Module {
     val ALUSrcE     = Input(Bool())
     val rdE         = Input(UInt(5.W))
     val uopE        = Input(uopc())
-    val RegWriteE   = Input(Bool())
+    val WriteEnableE= Input(Bool())
     val XcptInvalidE= Input(Bool())
     val ForwardAE   = Input(UInt(2.W))
     val ForwardBE   = Input(UInt(2.W))
@@ -89,7 +89,7 @@ class EXstage extends Module {
     val ALUResultE  = Output(UInt(32.W))
     val exceptionE  = Output(Bool())
     val rdOutE      = Output(UInt(5.W))
-    val RegWriteOutE= Output(Bool())
+    val WriteEnableOutE= Output(Bool())
     val PCSrcE      = Output(Bool())
     val PCTargetE   = Output(UInt(32.W))
   })
@@ -123,7 +123,7 @@ class EXstage extends Module {
   io.ALUResultE   := Mux(io.JumpE, io.PCPlus4E, ALU.io.aluResult)  // rd = pc+4 for JAL/JALR
   io.exceptionE   := io.XcptInvalidE
   io.rdOutE       := io.rdE
-  io.RegWriteOutE := io.RegWriteE
+  io.WriteEnableOutE := io.WriteEnableE
 }
 
 //ToDo: Add your implementation according to the specification above here

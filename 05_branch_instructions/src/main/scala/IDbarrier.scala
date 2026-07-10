@@ -46,7 +46,7 @@ class IDBarrier extends Module{
         val RD1D          = Input(UInt(32.W))
         val RD2D          = Input(UInt(32.W))
         val XcptInvalidD  = Input(Bool())
-        val RegWriteD     = Input(Bool())
+        val WriteEnableD     = Input(Bool())
         val ALUSrcD       = Input(Bool())
         val ImmExtD       = Input(UInt(32.W))
         val BranchD       = Input(Bool())
@@ -64,7 +64,7 @@ class IDBarrier extends Module{
         val RD1E          = Output(UInt(32.W))
         val RD2E          = Output(UInt(32.W))
         val XcptInvalidE  = Output(Bool())
-        val RegWriteE     = Output(Bool())
+        val WriteEnableE     = Output(Bool())
         val ALUSrcE       = Output(Bool())
         val ImmExtE       = Output(UInt(32.W))
         val BranchE       = Output(Bool())
@@ -80,7 +80,7 @@ class IDBarrier extends Module{
     val rd           = RegInit(0.U(5.W))
     val RD1          = RegInit(0.U(32.W))
     val RD2          = RegInit(0.U(32.W))
-    val RegWrite     = RegInit(false.B)
+    val WriteEnable     = RegInit(false.B)
     val ALUSrc       = RegInit(false.B)
     val ImmExt       = RegInit(0.U(32.W))
     val Branch       = RegInit(false.B)
@@ -96,7 +96,7 @@ class IDBarrier extends Module{
         rd          := 0.U
         RD1         := 0.U
         RD2         := 0.U
-        RegWrite    := false.B
+        WriteEnable    := false.B
         ALUSrc      := false.B
         ImmExt      := 0.U
         Branch      := false.B
@@ -111,7 +111,7 @@ class IDBarrier extends Module{
         RD1         := io.RD1D
         RD2         := io.RD2D
         XcptInvalid := io.XcptInvalidD
-        RegWrite    := io.RegWriteD
+        WriteEnable    := io.WriteEnableD
         ALUSrc      := io.ALUSrcD
         ImmExt      := io.ImmExtD
         Branch      := io.BranchD
@@ -127,7 +127,7 @@ class IDBarrier extends Module{
     io.rdE          := rd
     io.RD1E         := RD1
     io.RD2E         := RD2
-    io.RegWriteE    := RegWrite
+    io.WriteEnableE    := WriteEnable
     io.ALUSrcE      := ALUSrc
     io.ImmExtE      := ImmExt
     io.BranchE      := Branch

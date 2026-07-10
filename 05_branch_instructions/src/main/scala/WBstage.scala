@@ -46,17 +46,17 @@ class WBstage extends Module {
   val io = IO(new Bundle {
     val ALUResultW = Input(UInt(32.W))
     val rdW        = Input(UInt(5.W))
-    val RegWriteW  = Input(Bool())
+    val WriteEnableW  = Input(Bool())
 
-    val RegWriteReq = new Bundle {
+    val WriteEnableReq = new Bundle {
       val addr = Output(UInt(5.W))
       val data = Output(UInt(32.W))
       val w_en = Output(Bool())
     }
     val ResultW = Output(UInt(32.W))
   })
-  io.RegWriteReq.addr := io.rdW
-  io.RegWriteReq.data := io.ALUResultW
-  io.RegWriteReq.w_en := io.RegWriteW
+  io.WriteEnableReq.addr := io.rdW
+  io.WriteEnableReq.data := io.ALUResultW
+  io.WriteEnableReq.w_en := io.WriteEnableW
   io.ResultW           := io.ALUResultW
 }

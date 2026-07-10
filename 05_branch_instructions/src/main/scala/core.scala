@@ -75,7 +75,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val JumpEdebug     = Output(Bool())
     val PCSrcEdebug    = Output(Bool())
     val PCTargetEdebug = Output(UInt(32.W))
-    val RegWriteWdebug = Output(Bool())
+    val WriteEnableWdebug = Output(Bool())
     val rdWdebug       = Output(UInt(5.W))
 
     val PCSrcE_debug   = Output(Bool())
@@ -112,9 +112,9 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDstage.io.inst        := IFBarrier.io.InstrD
   IDstage.io.pcD         := IFBarrier.io.PCD
   IDstage.io.pcPlus4D    := IFBarrier.io.PCPlus4D
-  IDstage.io.RegWriteW   := WBstage.io.RegWriteReq.w_en
-  IDstage.io.rdW         := WBstage.io.RegWriteReq.addr
-  IDstage.io.ResultW     := WBstage.io.RegWriteReq.data
+  IDstage.io.WriteEnableW:= WBstage.io.WriteEnableReq.w_en
+  IDstage.io.rdW         := WBstage.io.WriteEnableReq.addr
+  IDstage.io.ResultW     := WBstage.io.WriteEnableReq.data
 
   //ID BARRIER
   IDBarrier.io.uopD         := IDstage.io.uop
@@ -122,7 +122,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDBarrier.io.RD1D         := IDstage.io.RD1D
   IDBarrier.io.RD2D         := IDstage.io.RD2D
   IDBarrier.io.XcptInvalidD := IDstage.io.XcptInvalid
-  IDBarrier.io.RegWriteD    := IDstage.io.RegWriteD
+  IDBarrier.io.WriteEnableD    := IDstage.io.WriteEnableD
   IDBarrier.io.ALUSrcD      := IDstage.io.ALUSrcD
   IDBarrier.io.ImmExtD      := IDstage.io.ImmExtD
   IDBarrier.io.BranchD      := IDstage.io.BranchD
@@ -140,7 +140,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   EXstage.io.ALUSrcE      := IDBarrier.io.ALUSrcE
   EXstage.io.rdE          := IDBarrier.io.rdE
   EXstage.io.uopE         := IDBarrier.io.uopE
-  EXstage.io.RegWriteE    := IDBarrier.io.RegWriteE
+  EXstage.io.WriteEnableE    := IDBarrier.io.WriteEnableE
   EXstage.io.XcptInvalidE := IDBarrier.io.XcptInvalidE
   EXstage.io.PCE          := IDBarrier.io.PCE
   EXstage.io.PCPlus4E     := IDBarrier.io.PCPlus4E
@@ -151,18 +151,18 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   EXBarrier.io.ALUResultE   := EXstage.io.ALUResultE
   EXBarrier.io.rdE          := EXstage.io.rdOutE
   EXBarrier.io.XcptInvalidE := EXstage.io.exceptionE
-  EXBarrier.io.RegWriteE    := EXstage.io.RegWriteOutE
+  EXBarrier.io.WriteEnableE    := EXstage.io.WriteEnableOutE
 
   //MEM STAGE (empty: connect MEM barrier straight to EX barrier outputs)
   MEMBarrier.io.ALUResultM   := EXBarrier.io.ALUResultM
   MEMBarrier.io.rdM          := EXBarrier.io.rdM
   MEMBarrier.io.XcptInvalidM := EXBarrier.io.XcptInvalidM
-  MEMBarrier.io.RegWriteM    := EXBarrier.io.RegWriteM
+  MEMBarrier.io.WriteEnableM    := EXBarrier.io.WriteEnableM
 
   //WB STAGE
   WBstage.io.ALUResultW := MEMBarrier.io.ALUResultW
   WBstage.io.rdW        := MEMBarrier.io.rdW
-  WBstage.io.RegWriteW  := MEMBarrier.io.RegWriteW
+  WBstage.io.WriteEnableW  := MEMBarrier.io.WriteEnableW
 
   //WB BARRIER
   WBBarrier.io.ResultW      := WBstage.io.ResultW
@@ -173,10 +173,10 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   ForwardingUnit.io.rs2_EX   := IDBarrier.io.Rs2E
 
   ForwardingUnit.io.rd_MEM   := EXBarrier.io.rdM
-  ForwardingUnit.io.wrEn_MEM := EXBarrier.io.RegWriteM
+  ForwardingUnit.io.wrEn_MEM := EXBarrier.io.WriteEnableM
 
   ForwardingUnit.io.rd_WB    := MEMBarrier.io.rdW
-  ForwardingUnit.io.wrEn_WB  := MEMBarrier.io.RegWriteW
+  ForwardingUnit.io.wrEn_WB  := MEMBarrier.io.WriteEnableW
 
   EXstage.io.ForwardAE  := ForwardingUnit.io.forwardA
   EXstage.io.ForwardBE  := ForwardingUnit.io.forwardB
@@ -197,7 +197,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   io.JumpEdebug     := IDBarrier.io.JumpE
   io.PCSrcEdebug    := EXstage.io.PCSrcE
   io.PCTargetEdebug := EXstage.io.PCTargetE
-  io.RegWriteWdebug := MEMBarrier.io.RegWriteW
+  io.WriteEnableWdebug := MEMBarrier.io.WriteEnableW
   io.rdWdebug       := MEMBarrier.io.rdW
 
   io.PCSrcE_debug      := EXstage.io.PCSrcE
