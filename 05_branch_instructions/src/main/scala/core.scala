@@ -77,6 +77,8 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val PCTargetEdebug = Output(UInt(32.W))
     val RegWriteWdebug = Output(Bool())
     val rdWdebug       = Output(UInt(5.W))
+
+    val PCSrcE_debug   = Output(Bool())
   })
 
   val IFstage   = Module(new IF(BinaryFile: String))
@@ -197,4 +199,6 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   io.PCTargetEdebug := EXstage.io.PCTargetE
   io.RegWriteWdebug := MEMBarrier.io.RegWriteW
   io.rdWdebug       := MEMBarrier.io.rdW
+
+  io.PCSrcE_debug      := EXstage.io.PCSrcE
 }

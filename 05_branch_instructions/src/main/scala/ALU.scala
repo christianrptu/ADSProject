@@ -47,6 +47,7 @@ class ALU extends Module {
   val shift_amount = io.operandB(4, 0)
 
   io.aluResult := 0.U
+  io.zero := io.aluResult === false.B
 
   switch(io.operation) {
 
@@ -67,5 +68,5 @@ class ALU extends Module {
     is(ALUOp.BLTU) { io.aluResult := 0.U; io.zero := io.operandA < io.operandB }
     is(ALUOp.BGEU) { io.aluResult := 0.U; io.zero := io.operandA >= io.operandB }
   }
-  io.zero := io.aluResult === false.B
+
 }
