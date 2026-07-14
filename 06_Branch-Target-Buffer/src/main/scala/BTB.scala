@@ -45,6 +45,42 @@ class BTBway extends Bundle {
   val counter = UInt(2.W)  //00 Strongly Not Taken, 11 Strongly Taken
 }
 
+class BTB_ctrl extends Module {
+  val io = IO(new Bundle {
+    val currentState = Input(UInt(2.W))
+    val mispredicted = Input(Bool())
+    val nextState    = Output(UInt(2.W))
+  }) 
+
+  val NT  = "b00".U
+  val WNT = "b01".U
+  val WT  = "b10".U
+  val T   = "b11".U
+
+  val ns = WireDefault(NT)
+
+  switch(io.currentState){
+    is(NT){
+      // Correct (not mispredicted) loops to NT (00). Wrong goes to WNT (01).
+      ns := Mux(io.mispredicted, WNT, NT) 
+    }
+    is(WNT){
+      // Correct goes to NT (00). Wrong goes to WT (10).
+      ns := Mux(io.mispredicted, WT, NT) 
+    }
+    is(WT){
+      // Correct goes to T (11). Wrong goes to WNT (01).
+      ns := Mux(io.mispredicted, WNT, T) 
+    }
+    is(T){
+      // Correct loops to T (11). Wrong goes to WT (10).
+      ns := Mux(io.mispredicted, WT, T) 
+    }
+  }
+  
+  io.nextState := ns
+}
+
 class BTB extends Module {
   val io = IO(new Bundle {
     // Add I/O ports according to the specification above here
@@ -106,17 +142,17 @@ class BTB extends Module {
   //The interface only gives us "mispredicted", not the actual outcome directly.
   // Reconstruct actualTaken from the prediction that was made and whether it was wrong.
   // On a miss, there was no entry, so the implicit prediction was "not taken".
-  val oldPredictTaken = Mux(uHit, Mux(uHit0, uWay0.counter(1), uWay1.counter(1)), false.B)
-  val actualTaken     = oldPredictTaken =/= io.mispredicted
-
   val oldCounter = Mux(uHit0, uWay0.counter, uWay1.counter)
 
-  val newCounterOnHit = Mux(actualTaken,
-    Mux(oldCounter === 3.U, 3.U, oldCounter + 1.U),
-    Mux(oldCounter === 0.U, 0.U, oldCounter - 1.U)
-  )
+  // Instantiate the prediction state machine
+  val btbCtrl = Module(new BTB_ctrl())
+  btbCtrl.io.currentState := oldCounter
+  btbCtrl.io.mispredicted := io.mispredicted
+
+  // Get the next state directly from the controller
+  val newCounterOnHit = btbCtrl.io.nextState
+
   // THE NEW ALLOCATION STARTS IN WEAK BUT IN THE DIRECTION OF THE LAST OUTCOME
-  // THIS IS THE BEST WAY TO START ALLOCATIONS OF THE STATE (see 6.1 answer 2)
   val newCounterOnAlloc = Mux(actualTaken, 2.U, 1.U)
 
   val finalCounter = Mux(uHit, newCounterOnHit, newCounterOnAlloc)
