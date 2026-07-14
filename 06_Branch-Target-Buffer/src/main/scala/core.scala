@@ -201,4 +201,10 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   io.rdWdebug       := MEMBarrier.io.rdW
 
   io.PCSrcE_debug      := EXstage.io.PCSrcE
+
+  //BTB WIRING
+  IFstage.io.PredictTakenF       := IFBarrier.io.PredictTakenF
+  IDstage.io.PredictTakenF       := IFBarrier.io.PredictTakenD
+  IDBarrier.io.PredictTakenD     := IDstage.io.PredictTakenD
+  EXstage.io.PredictTakenE       := IDBarrier.io.PredictTakenE
 }

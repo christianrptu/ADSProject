@@ -180,12 +180,12 @@ class ID extends Module{
         val inst           = Input(UInt(32.W))
         val pcD            = Input(UInt(32.W))
         val pcPlus4D       = Input(UInt(32.W))
-        val WriteEnableW      = Input(Bool())      // write enable for the instruction currently in WB
+        val WriteEnableW   = Input(Bool())      // write enable for the instruction currently in WB
         val rdW            = Input(UInt(5.W))
         val ResultW        = Input(UInt(32.W))
 
         val uop           = Output(uopc())
-        val WriteEnableD     = Output(Bool())
+        val WriteEnableD  = Output(Bool())
         val ALUSrcD       = Output(Bool())
         val ImmExtD       = Output(UInt(32.W))
         val BranchD       = Output(Bool())
@@ -197,6 +197,10 @@ class ID extends Module{
         val RD2D          = Output(UInt(32.W))
         val pcD_out        = Output(UInt(32.W))
         val pcPlus4D_out   = Output(UInt(32.W))
+
+        //BTB SIGNALS
+        val PredictTakenF  = Input(Bool())
+        val PredictTakenD  = Output(Bool())
     })
 
     val opcode = io.inst(6,0)
@@ -235,4 +239,7 @@ class ID extends Module{
     io.JumpD       := cu.io.JumpD
     io.pcD_out      := io.pcD
     io.pcPlus4D_out := io.pcPlus4D
+
+    //BTB SIGNALS
+    io.PredictTakenF := io.PredictTakenD
 }

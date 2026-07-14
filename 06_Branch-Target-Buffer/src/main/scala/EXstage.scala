@@ -92,6 +92,14 @@ class EXstage extends Module {
     val WriteEnableOutE= Output(Bool())
     val PCSrcE      = Output(Bool())
     val PCTargetE   = Output(UInt(32.W))
+    //BTB SIGNALS
+    val PredictTakenE     = Input(Bool()) //THIS COMES FROM THE BTB IN IFstage
+
+    val BTBUpdate         = Output(Bool())
+    val BTBUpdatePC       = Output(UInt(32.W))
+    val BTBUpdateTarget   = Output(UInt(32.W))
+    val BTBMispredicted   = Output(Bool())
+    val PredictTakenBTB   = Output(Bool())
   })
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
@@ -115,7 +123,7 @@ class EXstage extends Module {
   ALU.io.operation := ALUcontrol.io.mapped
 
   val jalr = io.JumpE && io.BranchE  // JALR condition
-  val pcTargetAdder = io.PCE + io.ImmExtE   // pc + imm, for branches/JAL
+  val pcTargetAdder = io.PCE + io.ImmExtE   // pc + imm, for branches/JA(io.PCE + io.ImmExtE)(31, 0)L
 
   io.PCSrcE    := (io.BranchE && ALU.io.zero) || io.JumpE
   io.PCTargetE := Mux(jalr, (ALU.io.aluResult & ~1.U(32.W)), pcTargetAdder)
@@ -124,6 +132,14 @@ class EXstage extends Module {
   io.exceptionE   := io.XcptInvalidE
   io.rdOutE       := io.rdE
   io.WriteEnableOutE := io.WriteEnableE
+
+  //BTB SIGNALS
+  io.BTBUpdate        := io.BranchE && !io.JumpE //BECAUSE WE USED BranchE=1 FOR JUMPS. EXCLUDED NOW
+  io.BTBUpdatePC      := io.PCE
+  io.BTBUpdateTarget  := io.PCTargetE
+  io.BTBMispredicted  := (io.PCSrcE =/= io.PredictTakenE) && io.BranchE && !io.JumpE
+
+  io.PredictTakenBTB  := io.PredictTakenE
 }
 
 //ToDo: Add your implementation according to the specification above here

@@ -38,6 +38,10 @@ class IFBarrier extends Module {
     val InstrD    = Output(UInt(32.W))
     val PCD       = Output(UInt(32.W))
     val PCPlus4D  = Output(UInt(32.W))
+
+    //BTB SIGNALS
+    val PredictTakenF = Input(Bool())
+    val PredictTakenD = Output(Bool())
   })
 
   //ToDo: Add your implementation above here
@@ -58,4 +62,9 @@ class IFBarrier extends Module {
   io.InstrD   := instrReg
   io.PCD      := pcReg
   io.PCPlus4D := pcPlus4Reg
+
+  //BTB SIGNALS
+  val PredictTakenReg = RegInit(false.B)        //HARDWIRED
+  PredictTakenReg     := io.PredictTakenF       //HARDWIRED
+  io.PredictTakenD    := PredictTakenReg        //HARDWIRED
 }

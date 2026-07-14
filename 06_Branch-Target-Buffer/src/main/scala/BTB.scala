@@ -64,7 +64,16 @@ class BTB extends Module {
   val numWays = 2
 
   // 8 SETS WITH 2 WAYS REGISTERS
-  val table = RegInit(VecInit(Seq.fill(numSets)(VecInit(Seq.fill(numWays)(0.U.asTypeOf(new BTBway))))))
+  val table = RegInit(
+    VecInit(
+      Seq.fill(numSets)(
+        VecInit(
+          Seq.fill(numWays)(0.U.asTypeOf(new BTBway)) //INITIALIZE THE TABLE ELEMENT WITH ZEROES
+        )
+      )
+    )
+  )
+
   // 1 LRU BIT TO POINT TO THE REWRITEABLE REGISTERS
   val lru   = RegInit(VecInit(Seq.fill(numSets)(0.U(1.W))))
 

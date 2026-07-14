@@ -48,6 +48,9 @@ class IF (BinaryFile: String) extends Module {
     val InstrF    = Output(UInt(32.W))
     val PCF       = Output(UInt(32.W))
     val PCPlus4F  = Output(UInt(32.W))
+
+    //BTB SIGNALS
+    val PredictTakenF = Output(Bool())
   })
 
   //ToDo: Add your implementation according to the specification above here
@@ -67,4 +70,7 @@ class IF (BinaryFile: String) extends Module {
 
   io.PCF      := PC
   io.PCPlus4F := PCPlus4
+
+  //BTB SIGNALS
+  io.PredictTakenF := false.B //HARDWIRE FOR NOW JUST TO COMPILE
 }

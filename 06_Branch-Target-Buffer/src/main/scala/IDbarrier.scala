@@ -71,6 +71,10 @@ class IDBarrier extends Module{
         val JumpE         = Output(Bool())
         val PCE           = Output(UInt(32.W))
         val PCPlus4E      = Output(UInt(32.W))
+
+        //BTB SIGNALS
+        val PredictTakenD = Input(Bool())
+        val PredictTakenE = Output(Bool())
     })
 
     //ToDo: Add your implementation according to the specification above here
@@ -136,4 +140,9 @@ class IDBarrier extends Module{
     io.PCPlus4E     := PCPlus4
     io.Rs1E         := rs1Addr // forwarding
     io.Rs2E         := rs2Addr // forwarding
+
+    //BTB SIGNALS
+    val PredictTakenD = RegInit(false.B)       //HARDWIRED TO COMPILE
+    PredictTakenD := io.PredictTakenD
+    io.PredictTakenE := PredictTakenD
 }
