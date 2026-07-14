@@ -4,29 +4,6 @@
 // Chair of Electronic Design Automation, RPTU in Kaiserslautern
 // File created on 05/12/2026 by Tobias Jauch (@tojauch)
 
-/*
-Branch Target Buffer (BTB): a hardware component that predicts the target address of conditional branch instructions to improve pipeline performance
-
-Functionality (cf. slide 6-48 of the lecture slides):
-    Stores target addresses and prediction information for conditional branch instructions
-    On a branch instruction, checks if the instruction is in the BTB and retrieves the predicted target address and prediction state
-    If the prediction is taken, the processor fetches the instruction from the predicted target address; if not taken, it continues sequentially
-    Updates the BTB entry based on the actual outcome of the branch instruction (taken or not taken) and updates the prediction state accordingly
-
-Inputs:
-    PC: A 32-bit program counter representing the address of the branch instruction being fetched or executed.
-    update: A 1-bit signal indicating whether the BTB should be updated with new information.
-    updatePC: A 32-bit program counter associated with the branch instruction being updated.
-    updateTarget: A 32-bit branch target address to be stored in the BTB.
-    mispredicted: A 1-bit signal indicating whether the prediction turned out to be incorrect during execution (used to update the predictor).
-
-Outputs:
-    valid: A 1-bit signal indicating whether the BTB has a valid prediction for the provided program counter.
-    target: A 32-bit signal representing the predicted branch target address when a valid prediction exists.
-    predictTaken: A 1-bit signal indicating whether the branch is predicted to be taken or not.
-
-*/
-
 package core_tile
 
 import chisel3._
@@ -37,12 +14,12 @@ import uopc._
 // Branch Target Buffer
 // -----------------------------------------
 
-//THIS IS A WAY FOR THE 8 SETS TIMES 2 WAYS
+// THIS IS A WAY FOR THE 8 SETS TIMES 2 WAYS
 class BTBway extends Bundle {
   val valid   = Bool()
-  val tag     = UInt(27.W) //THIS IS FOR THE PC[31:5]
+  val tag     = UInt(27.W) // This is for PC[31:5]
   val target  = UInt(32.W)
-  val counter = UInt(2.W)  //00 Strongly Not Taken, 11 Strongly Taken
+  val counter = UInt(2.W)  // 00 Strongly Not Taken, 11 Strongly Taken
 }
 
 class BTB_ctrl extends Module {
@@ -69,12 +46,12 @@ class BTB_ctrl extends Module {
       ns := Mux(io.mispredicted, WT, NT) 
     }
     is(WT){
-      // Correct goes to T (11). Wrong goes to WNT (01).
-      ns := Mux(io.mispredicted, WNT, T) 
+      // Correct (not mispredicted) loops to WT (10). Wrong goes to T (11).
+      ns := Mux(io.mispredicted, T, WT) 
     }
     is(T){
-      // Correct loops to T (11). Wrong goes to WT (10).
-      ns := Mux(io.mispredicted, WT, T) 
+      // Correct goes to WT (10). Wrong goes to NT (00).
+      ns := Mux(io.mispredicted, NT, WT) 
     }
   }
   
@@ -83,8 +60,7 @@ class BTB_ctrl extends Module {
 
 class BTB extends Module {
   val io = IO(new Bundle {
-    // Add I/O ports according to the specification above here
-    val PC              = Input(UInt(32.W))
+    val PC            = Input(UInt(32.W))
     val update          = Input(Bool())
     val updatePC        = Input(UInt(32.W))
     val updateTarget    = Input(UInt(32.W))
@@ -95,7 +71,6 @@ class BTB extends Module {
     val predictTaken    = Output(Bool())
   })
 
-  //ToDo: Add your implementation according to the specification in assignment 6 here. 
   val numSets = 8
   val numWays = 2
 
@@ -104,7 +79,7 @@ class BTB extends Module {
     VecInit(
       Seq.fill(numSets)(
         VecInit(
-          Seq.fill(numWays)(0.U.asTypeOf(new BTBway)) //INITIALIZE THE TABLE ELEMENT WITH ZEROES
+          Seq.fill(numWays)(0.U.asTypeOf(new BTBway)) // INITIALIZE THE TABLE ELEMENT WITH ZEROES
         )
       )
     )
@@ -113,7 +88,7 @@ class BTB extends Module {
   // 1 LRU BIT TO POINT TO THE REWRITEABLE REGISTERS
   val lru   = RegInit(VecInit(Seq.fill(numSets)(0.U(1.W))))
 
-  //COMBINATIONAL LOOKUP
+  // COMBINATIONAL LOOKUP
   val lookupIdx = io.PC(4,2)
   val lookupTag = io.PC(31,5)
 
@@ -128,7 +103,7 @@ class BTB extends Module {
   io.target       := lEntry.target
   io.predictTaken := lHit && lEntry.counter(1)
 
-  //UPDATE FROM EX STAGE
+  // UPDATE FROM EX STAGE
   val updIdx = io.updatePC(4, 2)
   val updTag = io.updatePC(31, 5)
 
@@ -138,10 +113,11 @@ class BTB extends Module {
   val uHit1 = uWay1.valid && uWay1.tag === updTag
   val uHit  = uHit0 || uHit1
 
-  //THIS PART WAS CHEATING SO I AM UNSURE ABOUT THIS:
-  //The interface only gives us "mispredicted", not the actual outcome directly.
-  // Reconstruct actualTaken from the prediction that was made and whether it was wrong.
-  // On a miss, there was no entry, so the implicit prediction was "not taken".
+  // Reconstruct actualTaken from the prediction made and whether it was wrong.
+  // On a miss, implicit prediction was "not taken" (false).
+  val oldPredictTaken = Mux(uHit, Mux(uHit0, uWay0.counter(1), uWay1.counter(1)), false.B)
+  val actualTaken     = oldPredictTaken =/= io.mispredicted
+
   val oldCounter = Mux(uHit0, uWay0.counter, uWay1.counter)
 
   // Instantiate the prediction state machine
@@ -157,7 +133,7 @@ class BTB extends Module {
 
   val finalCounter = Mux(uHit, newCounterOnHit, newCounterOnAlloc)
 
-  //IF HIT OVERWRITE THE MATCHING WAY. IF MISS REWRITE THE LRU IN THAT SET
+  // IF HIT OVERWRITE THE MATCHING WAY. IF MISS REWRITE THE LRU IN THAT SET
   val writeWay = Mux(uHit, Mux(uHit0, 0.U, 1.U), lru(updIdx))
 
   when(io.update) {
@@ -165,7 +141,7 @@ class BTB extends Module {
     table(updIdx)(writeWay).tag     := updTag
     table(updIdx)(writeWay).target  := io.updateTarget
     table(updIdx)(writeWay).counter := finalCounter
-    //CHEATING ALERT BELOW
-    lru(updIdx) := ~writeWay  // the way just touched becomes MRU, the other becomes LRU
+    
+    lru(updIdx) := ~writeWay  // The way just touched becomes MRU, the other becomes LRU
   }
 }
