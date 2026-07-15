@@ -34,7 +34,7 @@ class BTB_ctrl extends Module {
   val WT  = "b10".U
   val ST  = "b11".U
 
-  val ns = WireDefault(NT)
+  val ns = WireDefault(SNT)
 
   switch(io.currentState){
     is(SNT){
