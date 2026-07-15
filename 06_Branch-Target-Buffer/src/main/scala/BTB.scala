@@ -37,21 +37,21 @@ class BTB_ctrl extends Module {
   val ns = WireDefault(NT)
 
   switch(io.currentState){
-    is(NT){
-      // Correct (not mispredicted) loops to NT (00). Wrong goes to WNT (01).
-      ns := Mux(io.mispredicted, WNT, NT) 
+    is(SNT){
+      // Correct (not mispredicted) loops to SNT (00). Wrong goes to WNT (01).
+      ns := Mux(io.mispredicted, WNT, SNT) 
     }
     is(WNT){
       // Correct goes to NT (00). Wrong goes to WT (10).
-      ns := Mux(io.mispredicted, WT, NT) 
+      ns := Mux(io.mispredicted, WT, SNT) 
     }
     is(WT){
-      // Correct (not mispredicted) loops to WT (10). Wrong goes to T (11).
-      ns := Mux(io.mispredicted, T, WT) 
+      // Correct (not mispredicted) loops to WT (10). Wrong goes to ST (11).
+      ns := Mux(io.mispredicted, ST, WT) 
     }
-    is(T){
-      // Correct goes to WT (10). Wrong goes to NT (00).
-      ns := Mux(io.mispredicted, NT, WT) 
+    is(ST){
+      // Correct goes to WT (10). Wrong goes to SNT (00).
+      ns := Mux(io.mispredicted, SNT, WT) 
     }
   }
   
