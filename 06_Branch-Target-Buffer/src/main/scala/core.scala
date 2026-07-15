@@ -222,4 +222,5 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   printf(" \n\n\nCORE PRINT\n")
   printf("----------------------------------------------\n")
   printf(" BTB UPDATE: %x", BTB.io.update)
+  printf("\n----------------------------------------------\n")
 }
