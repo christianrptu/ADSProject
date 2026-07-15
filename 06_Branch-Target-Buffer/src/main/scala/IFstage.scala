@@ -52,7 +52,7 @@ class IF (BinaryFile: String) extends Module {
     //BTB SIGNALS
     val BTBTarget       = Input(UInt(32.W))   // NUEVO
     val BTBPredictTaken = Input(Bool())       // NUEVO
-    val PredictTakenF = Output(Bool())
+    val PredictTakenF   = Output(Bool())
   })
 
   //ToDo: Add your implementation according to the specification above here
@@ -76,4 +76,10 @@ class IF (BinaryFile: String) extends Module {
 
   //BTB SIGNALS
   io.PredictTakenF := false.B //HARDWIRE FOR NOW JUST TO COMPILE
+
+  printf(" \nIF STAGE SIGNALS\n")
+  printf("----------------------------------------------\n")
+  printf(" PCSrcE:       %x\n", io.PCSrcE)
+  printf(" PredictTaken: %x\n\n", io.PredictTakenF)
+
 }

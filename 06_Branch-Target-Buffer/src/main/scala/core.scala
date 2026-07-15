@@ -218,4 +218,8 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDstage.io.PredictTakenF       := IFBarrier.io.PredictTakenD
   IDBarrier.io.PredictTakenD     := IDstage.io.PredictTakenD
   EXstage.io.PredictTakenE       := IDBarrier.io.PredictTakenE
+
+  printf(" \n\n\nCORE PRINT\n")
+  printf("----------------------------------------------\n")
+  printf(" BTB UPDATE: %x", BTB.io.update)
 }

@@ -139,18 +139,20 @@ class EXstage extends Module {
   io.BTBUpdatePC      := io.PCE
   io.BTBUpdateTarget  := io.PCTargetE
   io.BTBMispredicted  := (io.PCSrcE =/= io.PredictTakenE) && io.BranchE && !io.JumpE
-
   io.PredictTakenBTB  := io.PredictTakenE
+  io.FlushE := io.JumpE || io.BTBMispredicted
+
 
   /*when(io.uopE === uopc.BNE) {
     printf("==============================================\n")
-    printf(" EXECUTE STAGE DEBUG (PC: %x)\n", io.PCE)
+    printf(" EXECUTE STAGE SIGNALS (PC: %x)\n", io.PCE)
     printf("----------------------------------------------\n")
     printf(" PC            : %x\n", io.PCE)
-    printf("==============================================\n\n") }
+    printf("==============================================\n\n")
+  }
    */
 
-  io.FlushE := io.JumpE || io.BTBMispredicted
+
 }
 
 //ToDo: Add your implementation according to the specification above here
