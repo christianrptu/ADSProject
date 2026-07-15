@@ -38,20 +38,32 @@ class BTB_ctrl extends Module {
 
   switch(io.currentState){
     is(SNT){
-      // Correct (not mispredicted) loops to SNT (00). Wrong goes to WNT (01).
-      ns := Mux(io.mispredicted, WNT, SNT) 
+      when(io.mispredicted === true.B){
+        ns := WNT
+      }.otherwise{
+        ns := SNT
+      }
     }
     is(WNT){
-      // Correct goes to NT (00). Wrong goes to WT (10).
-      ns := Mux(io.mispredicted, WT, SNT) 
+      when(io.mispredicted === true.B){
+        ns := WT
+      }.otherwise{
+        ns := SNT
+      }
     }
     is(WT){
-      // Correct (not mispredicted) loops to WT (10). Wrong goes to ST (11).
-      ns := Mux(io.mispredicted, ST, WT) 
+      when(io.mispredicted === true.B){
+        ns := ST
+      }.otherwise{
+        ns := WT
+      }
     }
     is(ST){
-      // Correct goes to WT (10). Wrong goes to SNT (00).
-      ns := Mux(io.mispredicted, SNT, WT) 
+      when(io.mispredicted === true.B){
+        ns := SNT
+      }.otherwise{
+        ns := WT
+      }
     }
   }
   
