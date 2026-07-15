@@ -29,10 +29,10 @@ class BTB_ctrl extends Module {
     val nextState    = Output(UInt(2.W))
   }) 
 
-  val NT  = "b00".U
+  val SNT = "b00".U
   val WNT = "b01".U
   val WT  = "b10".U
-  val T   = "b11".U
+  val ST  = "b11".U
 
   val ns = WireDefault(NT)
 
