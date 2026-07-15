@@ -81,22 +81,24 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
     val PCSrcE_debug   = Output(Bool())
   })
 
-  val IFstage   = Module(new IF(BinaryFile: String))
+  val IFstage = Module(new IF(BinaryFile: String))
   val IFBarrier = Module(new IFBarrier)
 
-  val IDstage   = Module(new ID)
+  val IDstage = Module(new ID)
   val IDBarrier = Module(new IDBarrier)
 
-  val EXstage   = Module(new EXstage)
+  val EXstage = Module(new EXstage)
   val EXBarrier = Module(new EXBarrier)
 
   // val MEMstage = Module(new MEM)   // unused: no memory instructions
   val MEMBarrier = Module(new MEMBarrier)
 
-  val WBstage   = Module(new WBstage)
+  val WBstage = Module(new WBstage)
   val WBBarrier = Module(new WBBarrier)
 
   val ForwardingUnit = Module(new ForwardingUnit)
+
+  val BTB = Module(new BTB)
 
   //IF STAGE
   IFstage.io.PCSrcE    := EXstage.io.PCSrcE
@@ -106,7 +108,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IFBarrier.io.InstrF   := IFstage.io.InstrF
   IFBarrier.io.PCF      := IFstage.io.PCF
   IFBarrier.io.PCPlus4F := IFstage.io.PCPlus4F
-  IFBarrier.io.CLR      := EXstage.io.PCSrcE
+  IFBarrier.io.CLR      := EXstage.io.FlushE
 
   //ID STAGE
   IDstage.io.inst        := IFBarrier.io.InstrD
@@ -131,7 +133,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   IDBarrier.io.PCPlus4D     := IDstage.io.pcPlus4D_out
   IDBarrier.io.rs1D         := IFBarrier.io.InstrD(19,15)  // rs1
   IDBarrier.io.rs2D         := IFBarrier.io.InstrD(24,20)  // rs2
-  IDBarrier.io.CLR          := EXstage.io.PCSrcE
+  IDBarrier.io.CLR          := EXstage.io.FlushE
 
   //EX STAGE
   EXstage.io.RD1E         := IDBarrier.io.RD1E
@@ -203,7 +205,16 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   io.PCSrcE_debug      := EXstage.io.PCSrcE
 
   //BTB WIRING
-  IFstage.io.PredictTakenF       := IFBarrier.io.PredictTakenF
+  BTB.io.PC             := IFstage.io.PCF          // lookup con el PC que se está fetcheando
+  BTB.io.update         := EXstage.io.BTBUpdate
+  BTB.io.updatePC       := EXstage.io.BTBUpdatePC
+  BTB.io.updateTarget   := EXstage.io.BTBUpdateTarget
+  BTB.io.mispredicted   := EXstage.io.BTBMispredicted
+
+  IFstage.io.BTBTarget        := BTB.io.target
+  IFstage.io.BTBPredictTaken  := BTB.io.predictTaken
+
+  IFBarrier.io.PredictTakenF     := IFstage.io.PredictTakenF
   IDstage.io.PredictTakenF       := IFBarrier.io.PredictTakenD
   IDBarrier.io.PredictTakenD     := IDstage.io.PredictTakenD
   EXstage.io.PredictTakenE       := IDBarrier.io.PredictTakenE

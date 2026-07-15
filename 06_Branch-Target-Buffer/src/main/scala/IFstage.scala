@@ -50,6 +50,8 @@ class IF (BinaryFile: String) extends Module {
     val PCPlus4F  = Output(UInt(32.W))
 
     //BTB SIGNALS
+    val BTBTarget       = Input(UInt(32.W))   // NUEVO
+    val BTBPredictTaken = Input(Bool())       // NUEVO
     val PredictTakenF = Output(Bool())
   })
 
@@ -58,13 +60,14 @@ class IF (BinaryFile: String) extends Module {
   loadMemoryFromFile(IMem, BinaryFile)
 
   val PC = RegInit(0.U(32.W))
-
   val addr = PC >> 2
-
   io.InstrF := IMem(addr(11,0))
 
   val PCPlus4 = PC + 4.U
-  val PCNext  = Mux(io.PCSrcE, io.PCTargetE, PCPlus4)
+
+  // Prioridad: 1) corrección real desde EX  2) predicción de la BTB  3) PC+4
+  val PCNext = Mux(io.PCSrcE, io.PCTargetE,
+    Mux(io.BTBPredictTaken, io.BTBTarget, PCPlus4))
 
   PC := PCNext
 

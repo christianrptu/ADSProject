@@ -241,5 +241,5 @@ class ID extends Module{
     io.pcPlus4D_out := io.pcPlus4D
 
     //BTB SIGNALS
-    io.PredictTakenF := io.PredictTakenD
+    io.PredictTakenD := io.PredictTakenF
 }

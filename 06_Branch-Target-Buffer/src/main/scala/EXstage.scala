@@ -92,9 +92,10 @@ class EXstage extends Module {
     val WriteEnableOutE= Output(Bool())
     val PCSrcE      = Output(Bool())
     val PCTargetE   = Output(UInt(32.W))
+    val FlushE      = Output(Bool())  //NUEVO
+
     //BTB SIGNALS
     val PredictTakenE     = Input(Bool()) //THIS COMES FROM THE BTB IN IFstage
-
     val BTBUpdate         = Output(Bool())
     val BTBUpdatePC       = Output(UInt(32.W))
     val BTBUpdateTarget   = Output(UInt(32.W))
@@ -140,6 +141,16 @@ class EXstage extends Module {
   io.BTBMispredicted  := (io.PCSrcE =/= io.PredictTakenE) && io.BranchE && !io.JumpE
 
   io.PredictTakenBTB  := io.PredictTakenE
+
+  /*when(io.uopE === uopc.BNE) {
+    printf("==============================================\n")
+    printf(" EXECUTE STAGE DEBUG (PC: %x)\n", io.PCE)
+    printf("----------------------------------------------\n")
+    printf(" PC            : %x\n", io.PCE)
+    printf("==============================================\n\n") }
+   */
+
+  io.FlushE := io.JumpE || io.BTBMispredicted
 }
 
 //ToDo: Add your implementation according to the specification above here
