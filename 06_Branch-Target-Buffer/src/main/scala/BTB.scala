@@ -156,4 +156,16 @@ class BTB extends Module {
     
     lru(updIdx) := ~writeWay  // The way just touched becomes MRU, the other becomes LRU
   }
+
+  printf(" ================= BTB TABLE DUMP =================\n")
+  for (s <- 0 until numSets) {
+    for (w <- 0 until numWays) {
+      val e = table(s)(w)
+      printf(s"  set=$s way=$w  valid=%x  tag=%x  target=%x  counter=%x  predictTaken=%x\n",
+        e.valid, e.tag, e.target, e.counter, e.counter(1))
+    }
+  }
+  printf(p"  LRU bits per set: ${lru}\n")
+  printf(" ====================================================\n")
+
 }

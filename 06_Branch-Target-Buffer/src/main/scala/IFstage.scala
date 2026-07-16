@@ -75,9 +75,9 @@ class IF (BinaryFile: String) extends Module {
   io.PCPlus4F := PCPlus4
 
   //BTB SIGNALS
-  io.PredictTakenF := false.B //HARDWIRE FOR NOW JUST TO COMPILE
+  io.PredictTakenF := io.BTBPredictTaken //HARDWIRE FOR NOW JUST TO COMPILE
 
-  printf(" \nIF STAGE SIGNALS\n")
+  printf(" IF STAGE SIGNALS\n")
   printf("----------------------------------------------\n")
   printf(" PCSrcE:       %x\n", io.PCSrcE)
   printf(" PredictTaken: %x\n\n", io.PredictTakenF)

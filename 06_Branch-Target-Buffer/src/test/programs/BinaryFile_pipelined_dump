@@ -1,4 +1,4 @@
-00400193 //ADDI x3, x0, 4       INITIALIZE X3 = 4
+00100193 //ADDI x3, x0, 1       INITIALIZE X3 = 1
 00800213 //ADDI x4, x0, 8       INITIALIZE X4 = 8
 00118193 //ADDI x3, x3, 1       DO X3 = X3 + 1
 fe321ee3 //BNE  x4, x3, -4      X3==X4?: GO BACK IF NOT
