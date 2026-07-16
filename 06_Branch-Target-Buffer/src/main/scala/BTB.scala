@@ -22,61 +22,13 @@ class BTBway extends Bundle {
   val counter = UInt(2.W)  // 00 Strongly Not Taken, 11 Strongly Taken
 }
 
-class BTB_ctrl extends Module {
-  val io = IO(new Bundle {
-    val currentState = Input(UInt(2.W))
-    val mispredicted = Input(Bool())
-    val nextState    = Output(UInt(2.W))
-  }) 
-
-  val SNT = "b00".U         // Strongly Not Taken
-  val WNT = "b01".U         // Weakly Not Taken
-  val WT  = "b10".U         // Weakly Taken
-  val ST  = "b11".U         // Strongly Taken
-
-  val ns = WireDefault(SNT)
-
-  switch(io.currentState){
-    is(SNT){
-      when(io.mispredicted === true.B){
-        ns := WNT
-      }.otherwise{
-        ns := SNT
-      }
-    }
-    is(WNT){
-      when(io.mispredicted === true.B){
-        ns := WT
-      }.otherwise{
-        ns := SNT
-      }
-    }
-    is(WT){
-      when(io.mispredicted === true.B){
-        ns := ST
-      }.otherwise{
-        ns := WT
-      }
-    }
-    is(ST){
-      when(io.mispredicted === true.B){
-        ns := SNT
-      }.otherwise{
-        ns := WT
-      }
-    }
-  }
-  
-  io.nextState := ns
-}
-
 class BTB extends Module {
   val io = IO(new Bundle {
     val PC            = Input(UInt(32.W))
     val update          = Input(Bool())
     val updatePC        = Input(UInt(32.W))
     val updateTarget    = Input(UInt(32.W))
-    val mispredicted    = Input(Bool())
+    val actualTaken    = Input(Bool())
 
     val valid           = Output(Bool())
     val target          = Output(UInt(32.W))
@@ -127,21 +79,28 @@ class BTB extends Module {
 
   // Reconstruct actualTaken from the prediction made and whether it was wrong.
   // On a miss, implicit prediction was "not taken" (false).
-  val oldPredictTaken = Mux(uHit, Mux(uHit0, uWay0.counter(1), uWay1.counter(1)), false.B)
-  val actualTaken     = oldPredictTaken =/= io.mispredicted
 
   val oldCounter = Mux(uHit0, uWay0.counter, uWay1.counter)
 
-  // Instantiate the prediction state machine
-  val btbCtrl = Module(new BTB_ctrl())
-  btbCtrl.io.currentState := oldCounter
-  btbCtrl.io.mispredicted := io.mispredicted
+  // Saturating update
+  val newCounterOnHit = Wire(UInt(2.W))
 
-  // Get the next state directly from the controller
-  val newCounterOnHit = btbCtrl.io.nextState
+  when(io.actualTaken) {
+    when(oldCounter =/= 3.U) {
+      newCounterOnHit := oldCounter + 1.U
+    }.otherwise {
+      newCounterOnHit := oldCounter
+    }
+  }.otherwise {
+    when(oldCounter =/= 0.U) {
+      newCounterOnHit := oldCounter - 1.U
+    }.otherwise {
+      newCounterOnHit := oldCounter
+    }
+  }
 
   // THE NEW ALLOCATION STARTS IN WEAK BUT IN THE DIRECTION OF THE LAST OUTCOME
-  val newCounterOnAlloc = Mux(actualTaken, 2.U, 1.U)
+  val newCounterOnAlloc = Mux(io.actualTaken, 2.U, 1.U)
 
   val finalCounter = Mux(uHit, newCounterOnHit, newCounterOnAlloc)
 

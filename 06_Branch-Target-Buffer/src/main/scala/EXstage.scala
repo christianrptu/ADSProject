@@ -101,6 +101,7 @@ class EXstage extends Module {
     val BTBUpdateTarget   = Output(UInt(32.W))
     val BTBMispredicted   = Output(Bool())
     val PredictTakenBTB   = Output(Bool())
+    val BTBActualTaken = Output(Bool())
   })
   val ALU        = Module(new ALU)
   val ALUcontrol = Module(new ALUcontrol)
@@ -138,7 +139,16 @@ class EXstage extends Module {
   io.BTBUpdate        := io.BranchE && !io.JumpE //BECAUSE WE USED BranchE=1 FOR JUMPS. EXCLUDED NOW
   io.BTBUpdatePC      := io.PCE
   io.BTBUpdateTarget  := io.PCTargetE
-  io.BTBMispredicted  := (io.PCSrcE =/= io.PredictTakenE) && io.BranchE && !io.JumpE
+
+  val actualTaken = io.PCSrcE && io.BranchE && !io.JumpE
+
+  io.BTBMispredicted :=
+    (actualTaken =/= io.PredictTakenE) &&
+      io.BranchE &&
+      !io.JumpE
+
+  io.BTBActualTaken := actualTaken
+
   io.PredictTakenBTB  := io.PredictTakenE
   io.FlushE := io.JumpE || io.BTBMispredicted
 

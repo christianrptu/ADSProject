@@ -209,7 +209,7 @@ class PipelinedRV32Icore (BinaryFile: String) extends Module {
   BTB.io.update         := EXstage.io.BTBUpdate
   BTB.io.updatePC       := EXstage.io.BTBUpdatePC
   BTB.io.updateTarget   := EXstage.io.BTBUpdateTarget
-  BTB.io.mispredicted   := EXstage.io.BTBMispredicted
+  BTB.io.actualTaken    := EXstage.io.BTBActualTaken
 
   IFstage.io.BTBTarget        := BTB.io.target
   IFstage.io.BTBPredictTaken  := BTB.io.predictTaken
