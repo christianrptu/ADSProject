@@ -93,6 +93,8 @@ class EXstage extends Module {
     val PCSrcE      = Output(Bool())
     val PCTargetE   = Output(UInt(32.W))
     val FlushE      = Output(Bool())  //NUEVO
+    val PCE4        = Output(UInt(32.W))
+    val RedirectE = Output(Bool())
 
     //BTB SIGNALS
     val PredictTakenE     = Input(Bool()) //THIS COMES FROM THE BTB IN IFstage
@@ -151,6 +153,9 @@ class EXstage extends Module {
 
   io.PredictTakenBTB  := io.PredictTakenE
   io.FlushE := io.JumpE || io.BTBMispredicted
+
+  io.PCE4 := io.PCE + 4.U
+  io.RedirectE := io.BTBMispredicted
 
 
   /*when(io.uopE === uopc.BNE) {

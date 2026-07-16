@@ -44,6 +44,8 @@ class IF (BinaryFile: String) extends Module {
   val io = IO(new Bundle {
     val PCSrcE    = Input(Bool())
     val PCTargetE = Input(UInt(32.W))
+    val RedirectE = Input(Bool())
+    val PCE4 = Input(UInt(32.W))
 
     val InstrF    = Output(UInt(32.W))
     val PCF       = Output(UInt(32.W))
@@ -66,10 +68,18 @@ class IF (BinaryFile: String) extends Module {
   val PCPlus4 = PC + 4.U
 
   // Prioridad: 1) corrección real desde EX  2) predicción de la BTB  3) PC+4
-  val PCNext = Mux(io.PCSrcE, io.PCTargetE,
-    Mux(io.BTBPredictTaken, io.BTBTarget, PCPlus4))
+  when(io.RedirectE) {
 
-  PC := PCNext
+    PC := Mux(io.PCSrcE,
+      io.PCTargetE,       // Taken
+      io.PCE4) // Not Taken
+
+  }.otherwise {
+
+    PC := Mux(io.BTBPredictTaken,
+      io.BTBTarget,
+      PCPlus4)
+  }
 
   io.PCF      := PC
   io.PCPlus4F := PCPlus4
