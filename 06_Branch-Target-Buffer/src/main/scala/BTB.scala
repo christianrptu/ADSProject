@@ -25,7 +25,7 @@ class BTBway extends Bundle {
 class BTB_ctrl extends Module {
   val io = IO(new Bundle {
     val currentState = Input(UInt(2.W))
-    val mispredicted = Input(Bool())
+    val taken        = Input(Bool())
     val nextState    = Output(UInt(2.W))
   }) 
 
@@ -36,34 +36,19 @@ class BTB_ctrl extends Module {
 
   val ns = WireDefault(SNT)
 
+  // Update based on actual branch outcome (`taken`).
   switch(io.currentState){
     is(SNT){
-      when(io.mispredicted === true.B){
-        ns := WNT
-      }.otherwise{
-        ns := SNT
-      }
+      when(io.taken){ ns := WNT }.otherwise{ ns := SNT }
     }
     is(WNT){
-      when(io.mispredicted === true.B){
-        ns := WT
-      }.otherwise{
-        ns := SNT
-      }
+      when(io.taken){ ns := WT  }.otherwise{ ns := SNT }
     }
     is(WT){
-      when(io.mispredicted === true.B){
-        ns := ST
-      }.otherwise{
-        ns := WT
-      }
+      when(io.taken){ ns := ST  }.otherwise{ ns := WNT }
     }
     is(ST){
-      when(io.mispredicted === true.B){
-        ns := SNT
-      }.otherwise{
-        ns := WT
-      }
+      when(io.taken){ ns := ST  }.otherwise{ ns := WT  }
     }
   }
   
@@ -130,12 +115,13 @@ class BTB extends Module {
   val oldPredictTaken = Mux(uHit, Mux(uHit0, uWay0.counter(1), uWay1.counter(1)), false.B)
   val actualTaken     = oldPredictTaken =/= io.mispredicted
 
-  val oldCounter = Mux(uHit0, uWay0.counter, uWay1.counter)
+  // If there's no hit, use a safe default counter (SNT)
+  val oldCounter = Mux(uHit, Mux(uHit0, uWay0.counter, uWay1.counter), 0.U)
 
   // Instantiate the prediction state machine
   val btbCtrl = Module(new BTB_ctrl())
   btbCtrl.io.currentState := oldCounter
-  btbCtrl.io.mispredicted := io.mispredicted
+  btbCtrl.io.taken := actualTaken
 
   // Get the next state directly from the controller
   val newCounterOnHit = btbCtrl.io.nextState
